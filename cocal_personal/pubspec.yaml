@@ -31,32 +31,25 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Backend y conexión
-    supabase_flutter: ^2.5.6
-    dio: ^5.7.0
-    connectivity_plus: ^6.0.3
+  supabase_flutter: ^2.5.6
+  dio: ^5.7.0
+  connectivity_plus: ^6.0.3
 
-  # Seguridad y almacenamiento
-    flutter_secure_storage: ^9.0.0
-    shared_preferences: ^2.3.2
-    crypto: ^3.0.5
+  flutter_secure_storage: ^9.0.0
+  shared_preferences: ^2.3.2
+  crypto: ^3.0.5
 
-  # Interfaz moderna
-    google_fonts: ^6.2.1
-    font_awesome_flutter: ^10.7.0
-    flutter_svg: ^2.0.9
-    responsive_framework: ^1.2.0
+  google_fonts: ^6.2.1
+  font_awesome_flutter: ^10.7.0
+  flutter_svg: ^2.0.9
+  responsive_framework: ^1.2.0
 
-  # Estado y lógica
-    provider: ^6.1.2
+  provider: ^6.1.2
 
-  # Utilitarios
-    fluttertoast: ^8.2.6
-    url_launcher: ^6.3.0
+  fluttertoast: ^8.2.6
+  url_launcher: ^6.3.0
 
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
-    cupertino_icons: ^1.0.8
+  cupertino_icons: ^1.0.8
 
 dev_dependencies:
   flutter_test:
