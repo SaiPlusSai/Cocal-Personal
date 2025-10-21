@@ -16,18 +16,23 @@ class _PantallaLoginState extends State<PantallaLogin> {
 
   Future<void> _login() async {
     setState(() => _cargando = true);
-    final error = await ServicioAutenticacion.iniciarSesion(
-      email: _emailCtl.text.trim(),
-      password: _passCtl.text,
+
+    // Llamamos al servicio de autenticación
+    final error = await AutenticacionService.iniciarSesion(
+      correo: _emailCtl.text.trim(),
+      contrasena: _passCtl.text,
     );
+
     setState(() => _cargando = false);
 
+    // Mostrar error si algo falla
     if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error)));
       return;
     }
 
-    // Al iniciar sesión correctamente, navegar a pantalla principal
+    // Redirigir a la pantalla principal si inicia sesión correctamente
     if (!mounted) return;
     Navigator.pushReplacementNamed(context, '/principal');
   }
@@ -41,26 +46,42 @@ class _PantallaLoginState extends State<PantallaLogin> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('Bienvenido a CoCal', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            const Text(
+              'Bienvenido a CoCal',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 20),
+
+            // Campo de correo
             TextField(
               controller: _emailCtl,
               keyboardType: TextInputType.emailAddress,
               decoration: const InputDecoration(labelText: 'Correo'),
             ),
             const SizedBox(height: 12),
+
+            // Campo de contraseña
             TextField(
               controller: _passCtl,
               obscureText: true,
               decoration: const InputDecoration(labelText: 'Contraseña'),
             ),
             const SizedBox(height: 20),
+
+            // Botón de ingreso
             ElevatedButton(
               onPressed: _cargando ? null : _login,
-              child: _cargando ? const CircularProgressIndicator() : const Text('Ingresar'),
+              child: _cargando
+                  ? const CircularProgressIndicator()
+                  : const Text('Ingresar'),
             ),
+
+            // Link a registro
             TextButton(
-              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PantallaRegistro())),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PantallaRegistro()),
+              ),
               child: const Text('¿No tenés cuenta? Registrate'),
             ),
           ],

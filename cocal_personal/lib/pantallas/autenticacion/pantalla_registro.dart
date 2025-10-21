@@ -15,24 +15,35 @@ class _PantallaRegistroState extends State<PantallaRegistro> {
   final _passCtl = TextEditingController();
   bool _cargando = false;
 
+  /// Función que maneja el registro del usuario
   Future<void> _registrar() async {
     setState(() => _cargando = true);
-    final error = await ServicioAutenticacion.registrar(
-      email: _emailCtl.text.trim(),
-      password: _passCtl.text,
+
+    final error = await AutenticacionService.registrar(
+      correo: _emailCtl.text.trim(),
+      contrasena: _passCtl.text,
       nombre: _nombreCtl.text.trim(),
       apellido: _apellidoCtl.text.trim(),
     );
+
     setState(() => _cargando = false);
 
+    // Mostrar error si algo falla
     if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error)));
       return;
     }
 
     if (!mounted) return;
-    Navigator.pop(context); // volver al login
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cuenta creada. Revisa tu correo.')));
+
+    // Volver al login al registrarse correctamente
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Cuenta creada exitosamente. Revisa tu correo 📧'),
+      ),
+    );
   }
 
   @override
@@ -43,17 +54,49 @@ class _PantallaRegistroState extends State<PantallaRegistro> {
         padding: const EdgeInsets.all(16),
         child: ListView(
           children: [
-            TextField(controller: _nombreCtl, decoration: const InputDecoration(labelText: 'Nombre')),
+            const Text(
+              'Crear una cuenta en CoCal',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+
+            // Nombre
+            TextField(
+              controller: _nombreCtl,
+              decoration: const InputDecoration(labelText: 'Nombre'),
+            ),
             const SizedBox(height: 8),
-            TextField(controller: _apellidoCtl, decoration: const InputDecoration(labelText: 'Apellido')),
+
+            // Apellido
+            TextField(
+              controller: _apellidoCtl,
+              decoration: const InputDecoration(labelText: 'Apellido'),
+            ),
             const SizedBox(height: 8),
-            TextField(controller: _emailCtl, decoration: const InputDecoration(labelText: 'Correo')),
+
+            // Correo electrónico
+            TextField(
+              controller: _emailCtl,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(labelText: 'Correo electrónico'),
+            ),
             const SizedBox(height: 8),
-            TextField(controller: _passCtl, obscureText: true, decoration: const InputDecoration(labelText: 'Contraseña')),
+
+            // Contraseña
+            TextField(
+              controller: _passCtl,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'Contraseña'),
+            ),
             const SizedBox(height: 16),
+
+            // Botón de registro
             ElevatedButton(
               onPressed: _cargando ? null : _registrar,
-              child: _cargando ? const CircularProgressIndicator() : const Text('Crear cuenta'),
+              child: _cargando
+                  ? const CircularProgressIndicator()
+                  : const Text('Crear cuenta'),
             ),
           ],
         ),
