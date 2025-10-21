@@ -1,10 +1,11 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:crypto/crypto.dart';
+import 'dart:convert';
 import 'supabase_service.dart';
 
 class AutenticacionService {
   static final _cliente = SupabaseService.cliente;
 
-  /// Registrar usuario en Supabase (Auth + tabla usuario)
   static Future<String?> registrar({
     required String correo,
     required String contrasena,
@@ -12,51 +13,59 @@ class AutenticacionService {
     String? apellido,
   }) async {
     try {
-      final respuesta = await _cliente.auth.signUp(
-        email: correo,
-        password: contrasena,
-      );
+      final existente = await _cliente
+          .from('usuario')
+          .select('id')
+          .eq('correo', correo)
+          .maybeSingle();
 
-      final user = respuesta.user;
-      if (user == null) return 'Error al registrar usuario';
+      if (existente != null && existente.isNotEmpty) {
+        return 'El correo ya está registrado';
+      }
 
-      final insert = await _cliente.from('usuario').insert({
+      final hash = sha256.convert(utf8.encode(contrasena)).toString();
+
+      await _cliente.from('usuario').insert({
         'correo': correo,
+        'contrasena': hash,
         'nombre': nombre,
         'apellido': apellido ?? '',
       });
 
-      if (insert.error != null) {
-        return insert.error!.message;
-      }
-
-      return null; // ✅ Registro exitoso
+      return null;
     } catch (e) {
-      return 'Error: $e';
+      return 'Error al registrar: $e';
     }
   }
 
-  /// Iniciar sesión con correo y contraseña
   static Future<String?> iniciarSesion({
     required String correo,
     required String contrasena,
   }) async {
     try {
-      final respuesta = await _cliente.auth.signInWithPassword(
-        email: correo,
-        password: contrasena,
-      );
+      final res = await _cliente
+          .from('usuario')
+          .select('contrasena, nombre')
+          .eq('correo', correo)
+          .maybeSingle();
 
-      final user = respuesta.user;
-      if (user == null) return 'Credenciales inválidas';
-      return null; // ✅ Login exitoso
+      if (res == null) {
+        return 'Usuario no encontrado';
+      }
+
+      final hash = sha256.convert(utf8.encode(contrasena)).toString();
+
+      if (res['contrasena'] != hash) {
+        return 'Contraseña incorrecta';
+      }
+
+      return null;
     } catch (e) {
-      return 'Error: $e';
+      return 'Error al iniciar sesión: $e';
     }
   }
 
-  /// Cerrar sesión
   static Future<void> cerrarSesion() async {
-    await _cliente.auth.signOut();
+    // No hay sesión activa, pero se puede limpiar almacenamiento local si luego usás SharedPreferences
   }
 }
