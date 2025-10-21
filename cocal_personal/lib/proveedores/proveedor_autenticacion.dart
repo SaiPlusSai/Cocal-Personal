@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../servicios/servicio_autenticacion.dart';
+import '../servicios/autenticacion_service.dart';
 
 /// Provider que maneja la sesión del usuario actual
 class ProveedorAutenticacion with ChangeNotifier {
@@ -40,9 +40,9 @@ class ProveedorAutenticacion with ChangeNotifier {
 
   /// Iniciar sesión
   Future<String?> iniciarSesion(String email, String password) async {
-    final error = await ServicioAutenticacion.iniciarSesion(
-      email: email,
-      password: password,
+    final error = await AutenticacionService.iniciarSesion(
+      correo: email,
+      contrasena: password,
     );
     if (error == null) {
       _autenticado = true;
@@ -57,9 +57,9 @@ class ProveedorAutenticacion with ChangeNotifier {
   /// Registrar usuario
   Future<String?> registrar(
       String nombre, String apellido, String email, String password) async {
-    final error = await ServicioAutenticacion.registrar(
-      email: email,
-      password: password,
+    final error = await AutenticacionService.registrar(
+      correo: email,
+      contrasena: password,
       nombre: nombre,
       apellido: apellido,
     );
@@ -73,7 +73,7 @@ class ProveedorAutenticacion with ChangeNotifier {
 
   /// Cerrar sesión
   Future<void> cerrarSesion() async {
-    await ServicioAutenticacion.cerrarSesion();
+    await AutenticacionService.cerrarSesion();
     await _almacen.delete(key: 'token');
     _autenticado = false;
     _correoUsuario = null;

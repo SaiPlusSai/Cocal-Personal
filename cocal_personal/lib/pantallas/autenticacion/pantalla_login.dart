@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../servicios/servicio_autenticacion.dart';
+import '../../servicios/autenticacion_service.dart';
 import 'pantalla_registro.dart';
 
 class PantallaLogin extends StatefulWidget {

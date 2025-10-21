@@ -2,20 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../proveedores/proveedor_autenticacion.dart';
 import '../dashboard/pantalla_dashboard.dart';
+import 'pantalla_registro.dart';
 
-class PantallaRegistro extends StatefulWidget {
-  const PantallaRegistro({super.key});
+class PantallaLogin extends StatefulWidget {
+  const PantallaLogin({super.key});
 
   @override
-  State<PantallaRegistro> createState() => _PantallaRegistroState();
+  State<PantallaLogin> createState() => _PantallaLoginState();
 }
 
-class _PantallaRegistroState extends State<PantallaRegistro> {
+class _PantallaLoginState extends State<PantallaLogin> {
   final _formKey = GlobalKey<FormState>();
   final correoCtrl = TextEditingController();
   final contrasenaCtrl = TextEditingController();
-  final nombreCtrl = TextEditingController();
-  final apellidoCtrl = TextEditingController();
   bool cargando = false;
 
   @override
@@ -23,7 +22,7 @@ class _PantallaRegistroState extends State<PantallaRegistro> {
     final auth = Provider.of<ProveedorAutenticacion>(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Registro de Usuario')),
+      appBar: AppBar(title: const Text('Iniciar Sesión')),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Form(
@@ -32,24 +31,15 @@ class _PantallaRegistroState extends State<PantallaRegistro> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               TextFormField(
-                controller: nombreCtrl,
-                decoration: const InputDecoration(labelText: 'Nombre'),
-                validator: (v) => v!.isEmpty ? 'Ingrese su nombre' : null,
-              ),
-              TextFormField(
-                controller: apellidoCtrl,
-                decoration: const InputDecoration(labelText: 'Apellido'),
-              ),
-              TextFormField(
                 controller: correoCtrl,
-                decoration: const InputDecoration(labelText: 'Correo'),
+                decoration: const InputDecoration(labelText: 'Correo electrónico'),
                 validator: (v) => v!.isEmpty ? 'Ingrese su correo' : null,
               ),
               TextFormField(
                 controller: contrasenaCtrl,
                 obscureText: true,
                 decoration: const InputDecoration(labelText: 'Contraseña'),
-                validator: (v) => v!.length < 6 ? 'Mínimo 6 caracteres' : null,
+                validator: (v) => v!.isEmpty ? 'Ingrese su contraseña' : null,
               ),
               const SizedBox(height: 20),
               ElevatedButton(
@@ -58,11 +48,9 @@ class _PantallaRegistroState extends State<PantallaRegistro> {
                     : () async {
                         if (_formKey.currentState!.validate()) {
                           setState(() => cargando = true);
-                          final error = await auth.registrar(
+                          final error = await auth.iniciarSesion(
                             correoCtrl.text.trim(),
                             contrasenaCtrl.text.trim(),
-                            nombreCtrl.text.trim(),
-                            apellidoCtrl.text.trim(),
                           );
                           setState(() => cargando = false);
                           if (error == null) {
@@ -80,8 +68,15 @@ class _PantallaRegistroState extends State<PantallaRegistro> {
                       },
                 child: cargando
                     ? const CircularProgressIndicator()
-                    : const Text('Registrarme'),
+                    : const Text('Entrar'),
               ),
+              TextButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PantallaRegistro()),
+                ),
+                child: const Text('¿No tienes cuenta? Regístrate'),
+              )
             ],
           ),
         ),
