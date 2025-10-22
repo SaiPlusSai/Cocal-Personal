@@ -116,19 +116,19 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
     }).toList();
   }
 
-  // ➕ Crear evento
-  Future<void> _crearEvento() async {
-    final tituloCtl = TextEditingController();
-    final descCtl = TextEditingController();
-    DateTime? fechaSeleccionada = DateTime.now();
-    TimeOfDay? horaSeleccionada = const TimeOfDay(hour: 9, minute: 0);
-    String tema = 'MUSICA';
-    String visibilidad = 'PUBLICO';
-    String estado = 'ACTIVO';
+ Future<void> _crearEvento() async {
+  final tituloCtl = TextEditingController();
+  final descCtl = TextEditingController();
+  DateTime? fechaSeleccionada = DateTime.now();
+  TimeOfDay? horaSeleccionada = const TimeOfDay(hour: 9, minute: 0);
+  String tema = 'MUSICA';
+  String visibilidad = 'PUBLICO';
+  String estado = 'ACTIVO';
 
-    await showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
+  await showDialog(
+    context: context,
+    builder: (_) => StatefulBuilder(
+      builder: (context, setStateDialog) => AlertDialog(
         title: const Text('➕ Nuevo evento'),
         content: SingleChildScrollView(
           child: Column(
@@ -180,7 +180,7 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
                           firstDate: DateTime(2020),
                           lastDate: DateTime(2100),
                         );
-                        if (fecha != null) fechaSeleccionada = fecha;
+                        if (fecha != null) setStateDialog(() => fechaSeleccionada = fecha);
                       },
                       icon: const Icon(Icons.calendar_today),
                       label: Text(
@@ -196,10 +196,9 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
                       onPressed: () async {
                         final hora = await showTimePicker(
                           context: context,
-                          initialTime:
-                              horaSeleccionada ?? const TimeOfDay(hour: 9, minute: 0),
+                          initialTime: horaSeleccionada ?? const TimeOfDay(hour: 9, minute: 0),
                         );
-                        if (hora != null) horaSeleccionada = hora;
+                        if (hora != null) setStateDialog(() => horaSeleccionada = hora);
                       },
                       icon: const Icon(Icons.schedule),
                       label: Text(
@@ -233,12 +232,13 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
                 horaSeleccionada!.minute,
               );
 
+              // 📦 Guardar evento principal
               final fila = await _cliente
                   .from('evento')
                   .insert({
                     'titulo': tituloCtl.text.trim(),
                     'descripcion': descCtl.text.trim(),
-                    'horario': fechaHoraFinal.toUtc().toIso8601String(),
+                    'horario': fechaHoraFinal.toIso8601String(),
                     'tema': tema,
                     'estado': estado,
                     'visibilidad': visibilidad,
@@ -248,7 +248,7 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
                   .select('id, titulo, horario')
                   .single();
 
-              // 🔔 Activar recordatorio opcional
+              // 🔔 Preguntar si quiere recordatorio
               final activarRecordatorio = await showDialog<bool>(
                 context: context,
                 builder: (_) => AlertDialog(
@@ -273,7 +273,6 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
                 minutosRecordatorio = await showDialog<int>(
                   context: context,
                   builder: (_) {
-                    final personalizadoCtl = TextEditingController();
                     int? valorSeleccionado;
                     return AlertDialog(
                       title: const Text('⏰ Elegí cuándo recordarte'),
@@ -289,45 +288,35 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
                                 ChoiceChip(
                                   label: const Text('10 min'),
                                   selected: valorSeleccionado == 10,
-                                  onSelected: (_) =>
-                                      setState(() => valorSeleccionado = 10),
+                                  onSelected: (_) => setState(() => valorSeleccionado = 10),
                                 ),
                                 ChoiceChip(
                                   label: const Text('30 min'),
                                   selected: valorSeleccionado == 30,
-                                  onSelected: (_) =>
-                                      setState(() => valorSeleccionado = 30),
+                                  onSelected: (_) => setState(() => valorSeleccionado = 30),
                                 ),
                                 ChoiceChip(
                                   label: const Text('1 hora'),
                                   selected: valorSeleccionado == 60,
-                                  onSelected: (_) =>
-                                      setState(() => valorSeleccionado = 60),
+                                  onSelected: (_) => setState(() => valorSeleccionado = 60),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 10),
-                            TextField(
-                              controller: personalizadoCtl,
-                              decoration: const InputDecoration(
-                                labelText: 'Otro (minutos personalizados)',
-                                border: OutlineInputBorder(),
-                              ),
-                              keyboardType: TextInputType.number,
-                            ),
-                            const SizedBox(height: 10),
-                            ElevatedButton(
+                            const SizedBox(height: 15),
+                            ElevatedButton.icon(
+                              icon: const Icon(Icons.check_circle_outline),
+                              label: const Text('Guardar'),
                               onPressed: () {
-                                if (personalizadoCtl.text.isNotEmpty) {
-                                  final valor = int.tryParse(personalizadoCtl.text);
-                                  if (valor != null && valor > 0) {
-                                    Navigator.pop(context, valor);
-                                    return;
-                                  }
+                                if (valorSeleccionado != null && valorSeleccionado! > 0) {
+                                  Navigator.pop(context, valorSeleccionado);
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('⚠️ Elegí una opción antes de guardar.'),
+                                    ),
+                                  );
                                 }
-                                Navigator.pop(context, valorSeleccionado);
                               },
-                              child: const Text('Guardar'),
                             ),
                           ],
                         ),
@@ -336,9 +325,9 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
                   },
                 );
 
+                // ⚙️ Programar notificación si se seleccionó algo
                 if (minutosRecordatorio != null && minutosRecordatorio > 0) {
-                  final fechaEventoLocal =
-                      DateTime.parse(fila['horario']).toLocal();
+                  final fechaEventoLocal = DateTime.parse(fila['horario']).toLocal();
                   final fechaRecordatorio =
                       fechaEventoLocal.subtract(Duration(minutes: minutosRecordatorio));
 
@@ -360,16 +349,19 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
                 }
               }
 
+              // ✅ Cerrar todos los diálogos y actualizar calendario
               if (!mounted) return;
-              Navigator.pop(context);
+              Navigator.of(context, rootNavigator: true).pop(); // Cierra todos
               await _cargarEventos();
             },
             child: const Text('Guardar'),
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
+
 
   // 🗑 Eliminar evento
   Future<void> _eliminarEvento(int id) async {
@@ -407,7 +399,6 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                // 📆 CALENDARIO
                 TableCalendar(
                   focusedDay: _focusedDay,
                   firstDay: DateTime.utc(2020, 1, 1),
@@ -425,8 +416,6 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
                     selectedDecoration: BoxDecoration(color: Colors.deepPurple, shape: BoxShape.circle),
                   ),
                 ),
-
-                // 🧠 FILTROS
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   child: Column(
@@ -472,9 +461,7 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
                     ],
                   ),
                 ),
-
                 const Divider(),
-                
                 Expanded(
                   child: eventosDelDia.isEmpty
                       ? const Center(child: Text('No hay eventos en este día.'))

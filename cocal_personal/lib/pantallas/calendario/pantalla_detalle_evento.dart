@@ -85,7 +85,7 @@ class _PantallaDetalleEventoState extends State<PantallaDetalleEvento> {
       await _cliente.from('evento').update({
         'titulo': _tituloCtl.text.trim(),
         'descripcion': _descCtl.text.trim(),
-        'horario': fechaHoraFinal.toUtc().toIso8601String(),
+        'horario': fechaHoraFinal.toIso8601String(),
         'tema': _tema,
         'estado': _estado,
         'visibilidad': _visibilidad,
