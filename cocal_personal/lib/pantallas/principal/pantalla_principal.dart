@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../servicios/autenticacion_service.dart';
 import '../../servicios/supabase_service.dart';
-
+import '../calendario/pantalla_calendarios.dart'; // arriba del archivo
 class PantallaPrincipal extends StatefulWidget {
   final String correo; // 👈 Recibimos el correo del usuario desde el login
 
@@ -93,7 +93,14 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                           icono: Icons.calendar_month,
                           titulo: 'Calendario',
                           color: Colors.indigo,
-                          onTap: () => _mostrarSnack('Abrir calendario...'),
+                           onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PantallaCalendarios(correo: widget.correo),
+      ),
+    );
+  },
                         ),
                         _tarjetaAcceso(
                           icono: Icons.group,
