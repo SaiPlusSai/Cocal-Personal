@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../../servicios/supabase_service.dart';
 import 'pantalla_detalle_evento.dart';
-
+import '../../servicios/notificacion_service.dart';
 class PantallaEventosCalendario extends StatefulWidget {
   final int idCalendario;
   final String nombreCalendario;
@@ -187,30 +187,149 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
             ],
           ),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
-          ElevatedButton(
-            onPressed: () async {
-              if (tituloCtl.text.trim().isEmpty) return;
+       actions: [
+  TextButton(
+    onPressed: () => Navigator.pop(context),
+    child: const Text('Cancelar'),
+  ),
+  ElevatedButton(
+    onPressed: () async {
+      if (tituloCtl.text.trim().isEmpty || fechaSeleccionada == null) return;
 
-              await _cliente.from('evento').insert({
-                'titulo': tituloCtl.text.trim(),
-                'descripcion': descCtl.text.trim(),
-                'horario': fechaSeleccionada?.toUtc().toIso8601String(),
-                'tema': tema,
-                'estado': estado,
-                'visibilidad': visibilidad,
-                'id_calendario': widget.idCalendario,
-                'creador': 'Usuario Actual',
-              });
+   
+      final fila = await _cliente
+          .from('evento')
+          .insert({
+            'titulo': tituloCtl.text.trim(),
+            'descripcion': descCtl.text.trim(),
+            'horario': fechaSeleccionada!.toUtc().toIso8601String(),
+            'tema': tema,
+            'estado': estado,
+            'visibilidad': visibilidad,
+            'id_calendario': widget.idCalendario,
+            'creador': 'Usuario Actual',
+          })
+          .select('id, titulo, horario')
+          .single();
 
-              if (!mounted) return;
-              Navigator.pop(context);
-              await _cargarEventos();
-            },
-            child: const Text('Guardar'),
-          ),
-        ],
+      final activarRecordatorio = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('¿Activar recordatorio?'),
+          content: const Text('¿Querés que CoCal te avise antes del evento?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('No'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Sí'),
+            ),
+          ],
+        ),
+      );
+
+      int? minutosRecordatorio;
+
+      if (activarRecordatorio == true) {
+   
+        minutosRecordatorio = await showDialog<int>(
+          context: context,
+          builder: (_) {
+            final personalizadoCtl = TextEditingController();
+            int? valorSeleccionado;
+            return AlertDialog(
+              title: const Text('⏰ Elegí cuándo recordarte'),
+              content: StatefulBuilder(
+                builder: (context, setState) => Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Seleccioná cuánto antes querés el aviso:'),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 10,
+                      children: [
+                        ChoiceChip(
+                          label: const Text('10 min'),
+                          selected: valorSeleccionado == 10,
+                          onSelected: (_) => setState(() => valorSeleccionado = 10),
+                        ),
+                        ChoiceChip(
+                          label: const Text('30 min'),
+                          selected: valorSeleccionado == 30,
+                          onSelected: (_) => setState(() => valorSeleccionado = 30),
+                        ),
+                        ChoiceChip(
+                          label: const Text('1 hora'),
+                          selected: valorSeleccionado == 60,
+                          onSelected: (_) => setState(() => valorSeleccionado = 60),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: personalizadoCtl,
+                      decoration: const InputDecoration(
+                        labelText: 'Otro (minutos personalizados)',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 10),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (personalizadoCtl.text.isNotEmpty) {
+                          final valor = int.tryParse(personalizadoCtl.text);
+                          if (valor != null && valor > 0) {
+                            Navigator.pop(context, valor);
+                            return;
+                          }
+                        }
+                        Navigator.pop(context, valorSeleccionado);
+                      },
+                      child: const Text('Guardar'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+
+
+        if (minutosRecordatorio != null && minutosRecordatorio > 0) {
+          final fechaEventoLocal = DateTime.parse(fila['horario']).toLocal();
+          final fechaRecordatorio =
+              fechaEventoLocal.subtract(Duration(minutes: minutosRecordatorio));
+
+          final fechaProgramar = fechaRecordatorio.isBefore(DateTime.now())
+              ? DateTime.now().add(const Duration(seconds: 2))
+              : fechaRecordatorio;
+
+          await NotificacionService.programarNotificacion(
+            titulo: '⏰ Recordatorio de evento',
+            cuerpo:
+                'Tu evento "${fila['titulo']}" empezará en $minutosRecordatorio minutos.',
+            fecha: fechaProgramar,
+          );
+
+          await _cliente
+              .from('evento')
+              .update({'recordatorio_minutos': minutosRecordatorio})
+              .eq('id', fila['id']);
+        }
+      }
+
+      if (!mounted) return;
+      Navigator.pop(context);
+      await _cargarEventos();
+    },
+    child: const Text('Guardar'),
+  ),
+],
+
+
       ),
     );
   }
@@ -353,10 +472,20 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
   );
 },
 
-                                trailing: IconButton(
-                                  icon: const Icon(Icons.delete, color: Colors.red),
-                                  onPressed: () => _eliminarEvento(ev['id']),
-                                ),
+                               trailing: Row(
+  mainAxisSize: MainAxisSize.min,
+  children: [
+    if (ev['recordatorio_minutos'] != null)
+      Tooltip(
+        message: 'Recordatorio activo (${ev['recordatorio_minutos']} min antes)',
+        child: const Icon(Icons.notifications_active, color: Colors.amber),
+      ),
+    IconButton(
+      icon: const Icon(Icons.delete, color: Colors.red),
+      onPressed: () => _eliminarEvento(ev['id']),
+    ),
+  ],
+),
                               ),
                             );
                           },
