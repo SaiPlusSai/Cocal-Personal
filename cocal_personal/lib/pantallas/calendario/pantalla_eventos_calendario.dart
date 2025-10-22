@@ -268,111 +268,127 @@ Future<void> _crearEvento() async {
               int? minutosRecordatorio;
 
               if (activarRecordatorio == true) {
-                minutosRecordatorio = await showDialog<int>(
-                  context: context,
-                  builder: (_) {
-                    int? valorSeleccionado;
-                    double personalizado = 15;
-                    return AlertDialog(
-                      title: const Text('⏰ Elegí cuándo recordarte'),
-                      content: StatefulBuilder(
-                        builder: (context, setState) => Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                                'Seleccioná cuánto antes querés el aviso:'),
-                            const SizedBox(height: 12),
-                            Wrap(
-                              spacing: 10,
-                              children: [
-                                ChoiceChip(
-                                  avatar: const Icon(Icons.timer),
-                                  label: const Text('10 min'),
-                                  selected: valorSeleccionado == 10,
-                                  onSelected: (_) =>
-                                      setState(() => valorSeleccionado = 10),
-                                ),
-                                ChoiceChip(
-                                  avatar: const Icon(Icons.timer),
-                                  label: const Text('30 min'),
-                                  selected: valorSeleccionado == 30,
-                                  onSelected: (_) =>
-                                      setState(() => valorSeleccionado = 30),
-                                ),
-                                ChoiceChip(
-                                  avatar: const Icon(Icons.timer),
-                                  label: const Text('1 hora'),
-                                  selected: valorSeleccionado == 60,
-                                  onSelected: (_) =>
-                                      setState(() => valorSeleccionado = 60),
-                                ),
-                                ChoiceChip(
-                                  avatar: const Icon(Icons.edit),
-                                  label: const Text('Personalizado'),
-                                  selected: valorSeleccionado == -1,
-                                  onSelected: (_) =>
-                                      setState(() => valorSeleccionado = -1),
-                                ),
-                              ],
-                            ),
-                            if (valorSeleccionado == -1) ...[
-                              const SizedBox(height: 16),
-                              const Text('Definí minutos personalizados:'),
-                              Slider(
-                                min: 5,
-                                max: 120,
-                                divisions: 23,
-                                value: personalizado,
-                                label:
-                                    '${personalizado.toInt()} min antes del evento',
-                                onChanged: (v) =>
-                                    setState(() => personalizado = v),
-                              ),
-                            ],
-                            const SizedBox(height: 16),
-                            ElevatedButton.icon(
-                              icon: const Icon(Icons.save),
-                              label: const Text('Guardar recordatorio'),
-                              onPressed: () {
-                                final minutos = valorSeleccionado == -1
-                                    ? personalizado.toInt()
-                                    : valorSeleccionado ?? 0;
-                                if (minutos > 0) {
-                                  Navigator.pop(context, minutos);
-                                }
-                              },
-                            ),
-                          ],
+  // ✅ Guardamos el contexto del diálogo principal antes de abrir el nuevo
+  final parentContext = context;
+
+  minutosRecordatorio = await showDialog<int>(
+    context: context,
+    builder: (_) {
+      int? valorSeleccionado;
+      double personalizado = 15;
+      return AlertDialog(
+        title: const Text('⏰ Elegí cuándo recordarte'),
+        content: StatefulBuilder(
+          builder: (context, setState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Seleccioná cuánto antes querés el aviso:'),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 10,
+                children: [
+                  ChoiceChip(
+                    avatar: const Icon(Icons.timer),
+                    label: const Text('10 min'),
+                    selected: valorSeleccionado == 10,
+                    onSelected: (_) => setState(() => valorSeleccionado = 10),
+                  ),
+                  ChoiceChip(
+                    avatar: const Icon(Icons.timer),
+                    label: const Text('30 min'),
+                    selected: valorSeleccionado == 30,
+                    onSelected: (_) => setState(() => valorSeleccionado = 30),
+                  ),
+                  ChoiceChip(
+                    avatar: const Icon(Icons.timer),
+                    label: const Text('1 hora'),
+                    selected: valorSeleccionado == 60,
+                    onSelected: (_) => setState(() => valorSeleccionado = 60),
+                  ),
+                  ChoiceChip(
+                    avatar: const Icon(Icons.edit),
+                    label: const Text('Personalizado'),
+                    selected: valorSeleccionado == -1,
+                    onSelected: (_) => setState(() => valorSeleccionado = -1),
+                  ),
+                ],
+              ),
+              if (valorSeleccionado == -1) ...[
+                const SizedBox(height: 16),
+                const Text('Definí minutos personalizados:'),
+                Slider(
+                  min: 5,
+                  max: 120,
+                  divisions: 23,
+                  value: personalizado,
+                  label: '${personalizado.toInt()} min antes del evento',
+                  onChanged: (v) => setState(() => personalizado = v),
+                ),
+              ],
+              const SizedBox(height: 16),
+
+              // ✅ Este es el botón corregido
+              ElevatedButton.icon(
+                icon: const Icon(Icons.save),
+                label: const Text('Guardar recordatorio'),
+                onPressed: () async {
+                  final minutos = valorSeleccionado == -1
+                      ? personalizado.toInt()
+                      : valorSeleccionado ?? 0;
+
+                  if (minutos > 0) {
+                    Navigator.pop(context, minutos); // Cierra el diálogo de recordatorio
+                    await Future.delayed(const Duration(milliseconds: 200));
+
+                    // 👇 Usamos el contexto del diálogo principal para cerrarlo
+                    if (Navigator.canPop(parentContext)) {
+                      Navigator.of(parentContext, rootNavigator: true).pop();
+                    }
+
+                    // 👇 Refrescamos calendario con el contexto de la pantalla (seguro)
+                    if (mounted) {
+                      await _cargarEventos();
+                      ScaffoldMessenger.of(parentContext).showSnackBar(
+                        SnackBar(
+                          content: const Text('Evento guardado con recordatorio ✅'),
+                          backgroundColor: Colors.green.shade700,
+                          behavior: SnackBarBehavior.floating,
+                          margin: const EdgeInsets.all(10),
                         ),
-                      ),
-                    );
-                  },
-                );
+                      );
+                    }
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 
-                if (minutosRecordatorio != null && minutosRecordatorio > 0) {
-                  final fechaEventoLocal =
-                      DateTime.parse(fila['horario']).toLocal();
-                  final fechaRecordatorio = fechaEventoLocal.subtract(
-                      Duration(minutes: minutosRecordatorio));
+  // 🔔 Programa notificación si hace falta
+  if (minutosRecordatorio != null && minutosRecordatorio > 0) {
+    final fechaEventoLocal = DateTime.parse(fila['horario']).toLocal();
+    final fechaRecordatorio =
+        fechaEventoLocal.subtract(Duration(minutes: minutosRecordatorio));
 
-                  final fechaProgramar =
-                      fechaRecordatorio.isBefore(DateTime.now())
-                          ? DateTime.now().add(const Duration(seconds: 2))
-                          : fechaRecordatorio;
+    final fechaProgramar = fechaRecordatorio.isBefore(DateTime.now())
+        ? DateTime.now().add(const Duration(seconds: 2))
+        : fechaRecordatorio;
 
-                  await NotificacionService.programarNotificacion(
-                    titulo: '⏰ Recordatorio de evento',
-                    cuerpo:
-                        'Tu evento "${fila['titulo']}" empieza en $minutosRecordatorio minutos.',
-                    fecha: fechaProgramar,
-                  );
+    await NotificacionService.programarNotificacion(
+      titulo: '⏰ Recordatorio de evento',
+      cuerpo: 'Tu evento "${fila['titulo']}" empieza en $minutosRecordatorio minutos.',
+      fecha: fechaProgramar,
+    );
 
-                  await _cliente
-                      .from('evento')
-                      .update({'recordatorio_minutos': minutosRecordatorio})
-                      .eq('id', fila['id']);
-                }
-              }
+    await _cliente
+        .from('evento')
+        .update({'recordatorio_minutos': minutosRecordatorio})
+        .eq('id', fila['id']);
+  }
+}
 
               // ✅ Cerrar todo y refrescar una sola vez correctamente
               if (mounted) {
