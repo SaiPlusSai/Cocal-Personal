@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../servicios/autenticacion_service.dart';
 import 'pantalla_registro.dart';
+import '../principal/pantalla_principal.dart'; 
 
 class PantallaLogin extends StatefulWidget {
   const PantallaLogin({super.key});
@@ -17,7 +18,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
   Future<void> _login() async {
     setState(() => _cargando = true);
 
-    // Llamamos al servicio de autenticación
+    // 🔹 Llamamos al servicio de autenticación
     final error = await AutenticacionService.iniciarSesion(
       correo: _emailCtl.text.trim(),
       contrasena: _passCtl.text,
@@ -25,16 +26,21 @@ class _PantallaLoginState extends State<PantallaLogin> {
 
     setState(() => _cargando = false);
 
-    // Mostrar error si algo falla
+    // 🔸 Mostrar error si algo falla
     if (error != null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error)),
+      );
       return;
     }
 
-    // Redirigir a la pantalla principal si inicia sesión correctamente
+    // ✅ Redirigir al dashboard con el correo del usuario
     if (!mounted) return;
-    Navigator.pushReplacementNamed(context, '/principal');
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => PantallaPrincipal(correo: _emailCtl.text.trim()),
+      ),
+    );
   }
 
   @override
@@ -52,7 +58,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
             ),
             const SizedBox(height: 20),
 
-            // Campo de correo
+            // 📧 Campo de correo
             TextField(
               controller: _emailCtl,
               keyboardType: TextInputType.emailAddress,
@@ -60,7 +66,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
             ),
             const SizedBox(height: 12),
 
-            // Campo de contraseña
+            // 🔑 Campo de contraseña
             TextField(
               controller: _passCtl,
               obscureText: true,
@@ -68,7 +74,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
             ),
             const SizedBox(height: 20),
 
-            // Botón de ingreso
+            // 🔘 Botón de ingreso
             ElevatedButton(
               onPressed: _cargando ? null : _login,
               child: _cargando
@@ -76,7 +82,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
                   : const Text('Ingresar'),
             ),
 
-            // Link a registro
+            // 🔗 Enlace a registro
             TextButton(
               onPressed: () => Navigator.push(
                 context,

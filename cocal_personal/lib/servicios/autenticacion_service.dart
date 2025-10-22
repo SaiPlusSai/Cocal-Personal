@@ -1,10 +1,12 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:crypto/crypto.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 import 'supabase_service.dart';
 
 class AutenticacionService {
   static final _cliente = SupabaseService.cliente;
+  static const _almacen = FlutterSecureStorage();
 
   static Future<String?> registrar({
     required String correo,
@@ -19,9 +21,7 @@ class AutenticacionService {
           .eq('correo', correo)
           .maybeSingle();
 
-      if (existente != null && existente.isNotEmpty) {
-        return 'El correo ya está registrado';
-      }
+      if (existente != null) return 'El correo ya está registrado';
 
       final hash = sha256.convert(utf8.encode(contrasena)).toString();
 
@@ -49,15 +49,13 @@ class AutenticacionService {
           .eq('correo', correo)
           .maybeSingle();
 
-      if (res == null) {
-        return 'Usuario no encontrado';
-      }
+      if (res == null) return 'Usuario no encontrado';
 
       final hash = sha256.convert(utf8.encode(contrasena)).toString();
+      if (res['contrasena'] != hash) return 'Contraseña incorrecta';
 
-      if (res['contrasena'] != hash) {
-        return 'Contraseña incorrecta';
-      }
+      // 🔹 Guardar correo del usuario logueado
+      await _almacen.write(key: 'correo', value: correo);
 
       return null;
     } catch (e) {
@@ -65,7 +63,11 @@ class AutenticacionService {
     }
   }
 
+  static Future<String?> obtenerCorreoGuardado() async {
+    return await _almacen.read(key: 'correo');
+  }
+
   static Future<void> cerrarSesion() async {
-    // No hay sesión activa, pero se puede limpiar almacenamiento local si luego usás SharedPreferences
+    await _almacen.delete(key: 'correo');
   }
 }
