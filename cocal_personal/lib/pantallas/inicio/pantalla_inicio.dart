@@ -7,85 +7,100 @@ class PantallaInicio extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
-      backgroundColor: Colors.indigo.shade50,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(30),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Hero(
-                  tag: 'logo_cocal',
-                  child: Icon(
-                    Icons.calendar_month_rounded,
-                    size: 110,
-                    color: Colors.indigo,
-                  ),
-                ),
-                const SizedBox(height: 30),
-                const Text(
-                  'Bienvenido a CoCal 🎉',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.indigo,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  'Tu calendario colaborativo moderno y seguro.\nOrganizá, compartí y conectá con tu equipo.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 16, color: Colors.black54),
-                ),
-                const SizedBox(height: 40),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.indigo,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Logo/ícono con color de la marca
+                  Hero(
+                    tag: 'logo_cocal',
+                    child: Icon(
+                      Icons.calendar_month_rounded,
+                      size: 110,
+                      color: scheme.primary,
                     ),
                   ),
-                  icon: const Icon(Icons.login),
-                  label: const Text('Iniciar sesión'),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const PantallaLogin()),
-                    );
-                  },
-                ),
-                const SizedBox(height: 15),
-                OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.indigo),
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                  const SizedBox(height: 30),
+
+                  // Título con tipografía del tema
+                  Text(
+                    'Bienvenido a CoCal 🎉',
+                    textAlign: TextAlign.center,
+                    style: textTheme.titleLarge?.copyWith(color: scheme.primary),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Descripción usando onBackground con opacidad
+                  Text(
+                    'Tu calendario colaborativo moderno y seguro.\nOrganizá, compartí y conectá con tu equipo.',
+                    textAlign: TextAlign.center,
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: scheme.onBackground.withOpacity(0.70),
                     ),
                   ),
-                  icon: const Icon(Icons.person_add_alt_1),
-                  label: const Text(
-                    'Crear una cuenta nueva',
-                    style: TextStyle(color: Colors.indigo),
+                  const SizedBox(height: 40),
+
+                  // Botón primario (usa ElevatedButtonTheme del AppTheme)
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.login),
+                      label: const Text('Iniciar sesión'),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const PantallaLogin()),
+                        );
+                      },
+                    ),
                   ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const PantallaRegistro()),
-                    );
-                  },
-                ),
-                const SizedBox(height: 40),
-                const Text(
-                  'Versión 1.0.0 • CoCal',
-                  style: TextStyle(color: Colors.black38, fontSize: 12),
-                ),
-              ],
+                  const SizedBox(height: 15),
+
+                  // Botón secundario/alternativo con el color "secondary" de tu paleta
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: scheme.secondary,
+                        side: BorderSide(color: scheme.secondary),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.person_add_alt_1),
+                      label: const Text('Crear una cuenta nueva'),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const PantallaRegistro()),
+                        );
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 40),
+
+                  // Pie de página con color sutil
+                  Text(
+                    'Versión 1.0.0 • CoCal- CAMBIADO',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: scheme.onBackground.withOpacity(0.40),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
