@@ -1,3 +1,4 @@
+//lib/pantallas/inicio/pantalla_inicio.dart
 import 'package:flutter/material.dart';
 import '../autenticacion/pantalla_login.dart';
 import '../autenticacion/pantalla_registro.dart';

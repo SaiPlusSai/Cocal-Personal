@@ -1,5 +1,7 @@
+//pantallas/autenticacion/pantalla_registro.dart
 import 'package:flutter/material.dart';
-import '../../servicios/autenticacion_service.dart';
+import '../../servicios/autenticacion/autenticacion_service.dart';
+import 'pantalla_verificacion_pendiente.dart';
 
 class PantallaRegistro extends StatefulWidget {
   const PantallaRegistro({super.key});
@@ -19,73 +21,89 @@ class _PantallaRegistroState extends State<PantallaRegistro> {
     setState(() => _cargando = true);
 
     final error = await AutenticacionService.registrar(
-  correo: _emailCtl.text.trim(),
-  contrasena: _passCtl.text,
-  nombre: _nombreCtl.text.trim(),
-  apellido: _apellidoCtl.text.trim(),
-);
-
+      correo: _emailCtl.text.trim(),
+      contrasena: _passCtl.text,
+      nombre: _nombreCtl.text.trim(),
+      apellido: _apellidoCtl.text.trim(),
+    );
 
     setState(() => _cargando = false);
 
+    if (!mounted) return;
+
     if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error)),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
       return;
     }
 
-    if (!mounted) return;
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Cuenta creada correctamente. Revisá tu correo.')),
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PantallaVerificacionPendiente(
+          correo: _emailCtl.text.trim(),
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Registro de usuario')),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: ListView(
           children: [
-            const Hero(
+            Hero(
               tag: 'logo_cocal',
-              child: Icon(
-                Icons.calendar_month,
-                size: 100,
-                color: Colors.indigo,
-              ),
+              child: Icon(Icons.calendar_month, size: 100, color: scheme.primary),
             ),
             const SizedBox(height: 20),
+
             TextField(
               controller: _nombreCtl,
               decoration: const InputDecoration(labelText: 'Nombre'),
+              textInputAction: TextInputAction.next,
             ),
             const SizedBox(height: 8),
+
             TextField(
               controller: _apellidoCtl,
               decoration: const InputDecoration(labelText: 'Apellido'),
+              textInputAction: TextInputAction.next,
             ),
             const SizedBox(height: 8),
+
             TextField(
               controller: _emailCtl,
               decoration: const InputDecoration(labelText: 'Correo electrónico'),
               keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.next,
             ),
             const SizedBox(height: 8),
+
             TextField(
               controller: _passCtl,
               obscureText: true,
               decoration: const InputDecoration(labelText: 'Contraseña'),
+              onSubmitted: (_) => _cargando ? null : _registrar(),
             ),
             const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _cargando ? null : _registrar,
-              child: _cargando
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('Crear cuenta'),
+
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: _cargando ? null : _registrar,
+                child: _cargando
+                    ? const SizedBox(
+                        height: 20, width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Crear cuenta'),
+              ),
             ),
           ],
         ),

@@ -1,10 +1,7 @@
-import 'package:cocal_personal/pantallas/inicio/pantalla_inicio.dart';
 import 'package:flutter/material.dart';
-import 'app.dart';
 import 'servicios/supabase_service.dart';
-
+import 'rutas/rutas_app.dart';
 import 'estilos/app_theme.dart';
-import 'pantallas/inicio/pantalla_inicio.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,8 +17,10 @@ class AplicacionCoCal extends StatelessWidget {
     return MaterialApp(
       title: 'CoCal',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(), // 👈 aquí jalamos el tema
-      home: const PantallaInicio(), // o tu router inicial
+      theme: AppTheme.light(),
+      routes: obtenerRutas(),
+      onGenerateRoute: generarRuta,    // 👈 rutas dinámicas
+      initialRoute: '/inicio',         // 👈 ruta inicial
     );
   }
 }

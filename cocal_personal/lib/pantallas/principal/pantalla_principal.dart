@@ -1,5 +1,6 @@
+//lib/principal/pantalla_principal.dart
 import 'package:flutter/material.dart';
-import '../../servicios/autenticacion_service.dart';
+import '../../servicios/autenticacion/autenticacion_service.dart';
 
 class PantallaPrincipal extends StatelessWidget {
   const PantallaPrincipal({super.key});
