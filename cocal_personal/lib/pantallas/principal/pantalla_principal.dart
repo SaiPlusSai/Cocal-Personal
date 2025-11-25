@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
-import '../../servicios/autenticacion_service.dart';
+import '../../servicios/autenticacion/autenticacion_service.dart';
 import '../../servicios/supabase_service.dart';
-import '../calendario/pantalla_calendarios.dart'; // arriba del archivo
-class PantallaPrincipal extends StatefulWidget {
-  final String correo; // 👈 Recibimos el correo del usuario desde el login
+import '../calendario/pantalla_calendarios.dart';
 
-  const PantallaPrincipal({super.key, required this.correo});
+class PantallaPrincipal extends StatefulWidget {
+  const PantallaPrincipal({super.key}); // 👈 ya no pide correo
 
   @override
   State<PantallaPrincipal> createState() => _PantallaPrincipalState();
 }
 
 class _PantallaPrincipalState extends State<PantallaPrincipal> {
+  String? correoUsuario;
   String? nombreUsuario;
   String? apellidoUsuario;
   bool cargando = true;
@@ -25,12 +25,21 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   Future<void> _cargarUsuario() async {
     try {
       final cliente = SupabaseService.cliente;
+      final user = cliente.auth.currentUser;
 
-      // 🔍 Buscar datos del usuario por su correo
+      if (user == null || user.email == null) {
+        debugPrint('No hay usuario logueado en Supabase Auth');
+        setState(() => cargando = false);
+        return;
+      }
+
+      final correo = user.email!;
+      correoUsuario = correo; // lo guardamos para usarlo luego
+
       final res = await cliente
           .from('usuario')
           .select('nombre, apellido')
-          .eq('correo', widget.correo)
+          .eq('correo', correo)
           .maybeSingle();
 
       if (res != null) {
@@ -68,64 +77,63 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       body: cargando
           ? const Center(child: CircularProgressIndicator())
           : Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '👋 ¡Hola, ${nombreUsuario ?? 'usuario'} ${apellidoUsuario ?? ''}!',
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 30),
+            Expanded(
+              child: GridView.count(
+                crossAxisCount: 2,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
                 children: [
-                  // 👋 Saludo del usuario
-                  Text(
-                    '👋 ¡Hola, ${nombreUsuario ?? 'usuario'} ${apellidoUsuario ?? ''}!',
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  _tarjetaAcceso(
+                    icono: Icons.calendar_month,
+                    titulo: 'Calendario',
+                    color: Colors.indigo,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PantallaCalendarios(
+                            correo: correoUsuario ?? '',
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                  const SizedBox(height: 30),
-
-                  // 🟪 Tarjetas del Dashboard
-                  Expanded(
-                    child: GridView.count(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      children: [
-                        _tarjetaAcceso(
-                          icono: Icons.calendar_month,
-                          titulo: 'Calendario',
-                          color: Colors.indigo,
-                           onTap: () {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => PantallaCalendarios(correo: widget.correo),
-      ),
-    );
-  },
-                        ),
-                        _tarjetaAcceso(
-                          icono: Icons.group,
-                          titulo: 'Grupos',
-                          color: Colors.green,
-                          onTap: () => _mostrarSnack('Abrir grupos...'),
-                        ),
-                        _tarjetaAcceso(
-                          icono: Icons.event,
-                          titulo: 'Eventos',
-                          color: Colors.purple,
-                          onTap: () => _mostrarSnack('Abrir eventos...'),
-                        ),
-                        _tarjetaAcceso(
-                          icono: Icons.settings,
-                          titulo: 'Configuración',
-                          color: Colors.orange,
-                          onTap: () => _mostrarSnack('Abrir configuración...'),
-                        ),
-                      ],
-                    ),
+                  _tarjetaAcceso(
+                    icono: Icons.group,
+                    titulo: 'Grupos',
+                    color: Colors.green,
+                    onTap: () => _mostrarSnack('Abrir grupos...'),
+                  ),
+                  _tarjetaAcceso(
+                    icono: Icons.event,
+                    titulo: 'Eventos',
+                    color: Colors.purple,
+                    onTap: () => _mostrarSnack('Abrir eventos...'),
+                  ),
+                  _tarjetaAcceso(
+                    icono: Icons.settings,
+                    titulo: 'Configuración',
+                    color: Colors.orange,
+                    onTap: () => _mostrarSnack('Abrir configuración...'),
                   ),
                 ],
               ),
             ),
+          ],
+        ),
+      ),
     );
   }
 

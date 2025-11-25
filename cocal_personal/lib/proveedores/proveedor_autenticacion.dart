@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../servicios/autenticacion_service.dart';
+import '../servicios/autenticacion/autenticacion_service.dart';
 
 /// Provider que maneja la sesión del usuario actual
 class ProveedorAutenticacion with ChangeNotifier {

@@ -1,22 +1,35 @@
+// main.dart
 import 'package:flutter/material.dart';
-import 'app.dart';
-import 'servicios/notificacion_service.dart';
 import 'servicios/supabase_service.dart';
+import 'rutas/rutas_app.dart';
+import 'estilos/app_theme.dart';
+import 'core/auth_gate.dart';
+import 'pantallas/inicio/pantalla_inicio.dart';
+import 'pantallas/principal/pantalla_principal.dart';
+import 'pantallas/autenticacion/pantalla_login.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SupabaseService.inicializar();
-  await NotificacionService.inicializar();
-
-  // 🧪 PRUEBA AUTOMÁTICA DE NOTIFICACIÓN EN 5 SEGUNDOS
-  Future.delayed(const Duration(seconds: 5), () async {
-    print('🧪 Disparando notificación de prueba...');
-    await NotificacionService.programarNotificacion(
-      titulo: '🚨 Test inmediato',
-      cuerpo: 'Si ves esta notificación, todo funciona 🔥',
-      fecha: DateTime.now().add(const Duration(seconds: 3)),
-    );
-  });
-
   runApp(const AplicacionCoCal());
+}
+
+class AplicacionCoCal extends StatelessWidget {
+  const AplicacionCoCal({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'CoCal',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light(),
+      routes: obtenerRutas(),
+      onGenerateRoute: generarRuta,
+      // 👇 El árbol arranca en el AuthGate
+      home: const AuthGate(
+        loggedOut: PantallaLogin(),   // en vez de PantallaInicio
+        loggedIn: PantallaPrincipal(),
+      ),
+    );
+  }
 }
