@@ -72,6 +72,13 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
               Navigator.pushReplacementNamed(context, '/login');
             },
           ),
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            tooltip: 'Solicitudes',
+            onPressed: () {
+              Navigator.pushNamed(context, '/solicitudes');
+            },
+          ),
         ],
       ),
       body: cargando
@@ -128,6 +135,13 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     color: Colors.orange,
                     onTap: () => _mostrarSnack('Abrir configuración...'),
                   ),
+                  _tarjetaAcceso(
+                    icono: Icons.search,
+                    titulo: 'Usuarios',
+                    color: Colors.teal,
+                    onTap: () => Navigator.pushNamed(context, '/usuarios'),
+                  ),
+
                 ],
               ),
             ),
