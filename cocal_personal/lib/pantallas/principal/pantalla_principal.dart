@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../servicios/autenticacion/autenticacion_service.dart';
 import '../../servicios/supabase_service.dart';
 import '../calendario/pantalla_calendarios.dart';
+import '../social/pantalla_grupos.dart';
 
 class PantallaPrincipal extends StatefulWidget {
   const PantallaPrincipal({super.key}); // 👈 ya no pide correo
@@ -118,12 +119,6 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     },
                   ),
                   _tarjetaAcceso(
-                    icono: Icons.group,
-                    titulo: 'Grupos',
-                    color: Colors.green,
-                    onTap: () => _mostrarSnack('Abrir grupos...'),
-                  ),
-                  _tarjetaAcceso(
                     icono: Icons.event,
                     titulo: 'Eventos',
                     color: Colors.purple,
@@ -141,6 +136,20 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
                     color: Colors.teal,
                     onTap: () => Navigator.pushNamed(context, '/usuarios'),
                   ),
+                  _tarjetaAcceso(
+                    icono: Icons.group,
+                    titulo: 'Grupos',
+                    color: Colors.green,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const PantallaGrupos(),
+                        ),
+                      );
+                    },
+                  ),
+
 
                 ],
               ),
