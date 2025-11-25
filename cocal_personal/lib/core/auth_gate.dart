@@ -1,4 +1,5 @@
-//lib/core/auth_gate.dart
+// lib/core/auth_gate.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../servicios/autenticacion/perfil_service.dart';
@@ -14,24 +15,22 @@ class AuthGate extends StatefulWidget {
 
 class _AuthGateState extends State<AuthGate> {
   late final GoTrueClient _auth;
+  StreamSubscription<AuthState>? _sub;
 
   @override
   void initState() {
     super.initState();
     _auth = Supabase.instance.client.auth;
 
-    _auth.onAuthStateChange.listen((data) async {
+    _sub = _auth.onAuthStateChange.listen((data) async {
       final event = data.event;
       if (!mounted) return;
 
-      // Cuando el usuario confirma email (magic link) o hace login
       if (event == AuthChangeEvent.signedIn) {
-        // Upsert del perfil en tu tabla "users"
         await PerfilService.ensurePerfilDesdeAuth();
-        setState(() {}); // Redibuja → muestra loggedIn
+        setState(() {});
       }
 
-      // Supabase crea una sesión temporal al abrir el link de recuperación
       if (event == AuthChangeEvent.passwordRecovery) {
         Navigator.of(context).pushNamed('/nueva_contrasena');
       }
@@ -40,6 +39,12 @@ class _AuthGateState extends State<AuthGate> {
         setState(() {});
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
   }
 
   @override

@@ -1,3 +1,4 @@
+//lib/rutas/rutas_app.dart
 import 'package:flutter/material.dart';
 import '../pantallas/inicio/pantalla_inicio.dart';
 import '../pantallas/autenticacion/pantalla_login.dart';

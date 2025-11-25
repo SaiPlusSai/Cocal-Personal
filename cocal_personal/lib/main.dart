@@ -1,7 +1,12 @@
+// main.dart
 import 'package:flutter/material.dart';
 import 'servicios/supabase_service.dart';
 import 'rutas/rutas_app.dart';
 import 'estilos/app_theme.dart';
+import 'core/auth_gate.dart';
+import 'pantallas/inicio/pantalla_inicio.dart';
+import 'pantallas/principal/pantalla_principal.dart';
+import 'pantallas/autenticacion/pantalla_login.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,8 +24,12 @@ class AplicacionCoCal extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       routes: obtenerRutas(),
-      onGenerateRoute: generarRuta,    // 👈 rutas dinámicas
-      initialRoute: '/inicio',         // 👈 ruta inicial
+      onGenerateRoute: generarRuta,
+      // 👇 El árbol arranca en el AuthGate
+      home: const AuthGate(
+        loggedOut: PantallaLogin(),   // en vez de PantallaInicio
+        loggedIn: PantallaPrincipal(),
+      ),
     );
   }
 }

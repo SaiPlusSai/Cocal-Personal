@@ -51,6 +51,12 @@ dependencies:
 
   cupertino_icons: ^1.0.8
 
+  table_calendar: ^3.0.9
+  intl: ^0.18.1
+    
+  flutter_local_notifications: ^17.1.2
+  timezone: ^0.9.4
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -32,9 +32,17 @@ class _PantallaLoginState extends State<PantallaLogin> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error)),
       );
+      return;
     }
-    // 👇 ya no navegamos, el AuthGate se encarga
+
+    // ✅ Login OK: limpiamos la pila y vamos al principal
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      '/principal',
+          (_) => false,
+    );
   }
+
 
   @override
   Widget build(BuildContext context) {
