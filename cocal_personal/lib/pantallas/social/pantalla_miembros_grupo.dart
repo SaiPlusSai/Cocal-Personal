@@ -36,6 +36,7 @@ class _PantallaMiembrosGrupoState extends State<PantallaMiembrosGrupo> {
       _miembros = miembros;
       _cargando = false;
     });
+    debugPrint('[Miembros] _esAdmin = $_esAdmin, miembros = ${_miembros.length}');
   }
 
   Future<void> _salirDelGrupo() async {
@@ -44,7 +45,8 @@ class _PantallaMiembrosGrupoState extends State<PantallaMiembrosGrupo> {
       builder: (ctx) => AlertDialog(
         title: const Text('Salir del grupo'),
         content: Text(
-            '¿Seguro que quieres salir del grupo "${widget.grupo.nombre}"?'),
+          '¿Seguro que quieres salir del grupo "${widget.grupo.nombre}"?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -90,8 +92,7 @@ class _PantallaMiembrosGrupoState extends State<PantallaMiembrosGrupo> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-              'Rol de ${m.nombreCompleto} actualizado a $nuevoRol'),
+          content: Text('Rol de ${m.nombreCompleto} actualizado a $nuevoRol'),
         ),
       );
       _cargar();
@@ -112,8 +113,8 @@ class _PantallaMiembrosGrupoState extends State<PantallaMiembrosGrupo> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-              'Estado de ${m.nombreCompleto} cambiado a $nuevoEstado'),
+          content:
+          Text('Estado de ${m.nombreCompleto} cambiado a $nuevoEstado'),
         ),
       );
       _cargar();
@@ -126,7 +127,8 @@ class _PantallaMiembrosGrupoState extends State<PantallaMiembrosGrupo> {
       builder: (ctx) => AlertDialog(
         title: const Text('Eliminar miembro'),
         content: Text(
-            '¿Seguro que quieres eliminar a ${m.nombreCompleto} del grupo?'),
+          '¿Seguro que quieres eliminar a ${m.nombreCompleto} del grupo?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -154,8 +156,7 @@ class _PantallaMiembrosGrupoState extends State<PantallaMiembrosGrupo> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-              '${m.nombreCompleto} ha sido eliminado del grupo'),
+          content: Text('${m.nombreCompleto} ha sido eliminado del grupo'),
         ),
       );
       _cargar();
@@ -170,7 +171,6 @@ class _PantallaMiembrosGrupoState extends State<PantallaMiembrosGrupo> {
       appBar: AppBar(
         title: Text('Miembros – ${widget.grupo.nombre}'),
         actions: [
-          // Botón de salir del grupo (no para DUENO en esta pantalla)
           IconButton(
             icon: const Icon(Icons.exit_to_app),
             tooltip: 'Salir del grupo',
@@ -247,15 +247,16 @@ class _PantallaMiembrosGrupoState extends State<PantallaMiembrosGrupo> {
           },
         ),
       ),
-      // Más adelante aquí puedes poner un FAB para "Agregar miembros"
+      // Más adelante: FAB para invitar amigos, etc.
       // floatingActionButton: _esAdmin ? FloatingActionButton(...) : null,
     );
   }
 
   /// Construye el menú de acciones para cada miembro
-  Widget? _buildAccionesMiembro(
-      MiembroGrupo m, ColorScheme scheme) {
-    // Si NO soy admin, no muestro acciones
+  Widget? _buildAccionesMiembro(MiembroGrupo m, ColorScheme scheme) {
+    debugPrint('[Miembros] buildAcciones para ${m.nombreCompleto} '
+        'esActual=${m.esActual}, rol=${m.rol}, _esAdmin=$_esAdmin');
+    // Si NO soy admin o mod, no muestro acciones
     if (!_esAdmin) return null;
 
     // No permitimos acciones sobre uno mismo ni sobre el DUENO
@@ -266,7 +267,7 @@ class _PantallaMiembrosGrupoState extends State<PantallaMiembrosGrupo> {
       onSelected: (value) {
         switch (value) {
           case 'hacer_admin':
-            _cambiarRol(m, 'ADMIN');
+            _cambiarRol(m, 'MOD');
             break;
           case 'quitar_admin':
             _cambiarRol(m, 'MIEMBRO');
@@ -286,12 +287,12 @@ class _PantallaMiembrosGrupoState extends State<PantallaMiembrosGrupo> {
         if (m.rol == 'MIEMBRO')
           const PopupMenuItem(
             value: 'hacer_admin',
-            child: Text('Hacer admin'),
+            child: Text('Hacer moderador'),
           ),
-        if (m.rol == 'ADMIN')
+        if (m.rol == 'MOD')
           const PopupMenuItem(
             value: 'quitar_admin',
-            child: Text('Quitar admin'),
+            child: Text('Quitar moderador'),
           ),
         const PopupMenuDivider(),
         if (m.estado == 'ACTIVO')

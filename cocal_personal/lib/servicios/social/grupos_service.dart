@@ -75,7 +75,9 @@ class MiembroGrupo {
 class GruposService {
   static final _db = SupabaseService.cliente;
 
-  // ===== Helpers usuario actual =====
+  // ==========================
+  //   Helpers usuario actual
+  // ==========================
 
   /// Devuelve la fila completa de tabla "usuario" para el auth.currentUser
   static Future<Map<String, dynamic>> _getUsuarioActualRow() async {
@@ -114,7 +116,9 @@ class GruposService {
     }
   }
 
-  // ===== Grupos =====
+  // ==========================
+  //          GRUPOS
+  // ==========================
 
   /// Crear grupo y asignar al usuario actual como DUENO
   static Future<String?> crearGrupo({
@@ -185,21 +189,27 @@ class GruposService {
     return out;
   }
 
-  /// ¿El usuario actual es ADMIN/DUENO en este grupo?
+  /// ¿El usuario actual es ADMIN/DUENO en este grupo o MOD?
   static Future<bool> esAdminDeGrupo(int idGrupo) async {
     try {
       final me = await _getUsuarioActualRow();
       final miId = me['id'] as int;
 
-      final rows = await _db
+      final row = await _db
           .from('perfil_grupo')
-          .select('id, rol')
+          .select('rol')
           .eq('id_grupo', idGrupo)
           .eq('id_usuario', miId)
-          .inFilter('rol', ['DUENO', 'ADMIN'])
-          .limit(1);
+          .maybeSingle();
 
-      return (rows as List).isNotEmpty;
+      if (row == null) {
+        debugPrint('[GruposService] esAdminDeGrupo: no hay registro en perfil_grupo');
+        return false;
+      }
+
+      final rol = row['rol'] as String? ?? '';
+      debugPrint('[GruposService] esAdminDeGrupo: rol actual = $rol');
+      return rol == 'DUENO' || rol == 'MOD';
     } catch (e) {
       debugPrint('[GruposService] Error esAdminDeGrupo: $e');
       return false;
@@ -298,7 +308,11 @@ class GruposService {
     }
   }
 
-  /// Cambiar rol de un miembro
+  // ==========================
+  //   ADMINISTRACIÓN MIEMBROS
+  // ==========================
+
+  /// Cambiar rol de un miembro (por PK de perfil_grupo)
   static Future<String?> cambiarRolMiembro({
     required int idPerfilGrupo,
     required String nuevoRol, // 'ADMIN', 'MIEMBRO', etc.
@@ -316,7 +330,7 @@ class GruposService {
     }
   }
 
-  /// Suspender / reactivar miembro (cambiar estado)
+  /// Suspender / reactivar miembro (cambiar estado, por PK de perfil_grupo)
   static Future<String?> cambiarEstadoMiembro({
     required int idPerfilGrupo,
     required String nuevoEstado, // 'ACTIVO' / 'SUSPENDIDO'
@@ -334,16 +348,40 @@ class GruposService {
     }
   }
 
-  /// Eliminar miembro del grupo
+  /// Eliminar miembro del grupo (kick), por PK de perfil_grupo
   static Future<String?> eliminarMiembro({
     required int idPerfilGrupo,
   }) async {
     try {
-      await _db.from('perfil_grupo').delete().eq('id', idPerfilGrupo);
+      await _db
+          .from('perfil_grupo')
+          .delete()
+          .eq('id', idPerfilGrupo);
+
       return null;
     } catch (e) {
-      debugPrint('[GruposService] Error eliminarMiembro: $e');
+      debugPrint('[GruposService] Error en eliminarMiembro: $e');
       return 'No se pudo eliminar al miembro';
+    }
+  }
+
+  /// Obtener MI rol en un grupo (para saber qué permisos tengo)
+  static Future<String?> obtenerMiRol(int idGrupo) async {
+    try {
+      final idUsuario = await _obtenerUsuarioActualId();
+      if (idUsuario == null) return null;
+
+      final res = await _db
+          .from('perfil_grupo')
+          .select('rol')
+          .eq('id_grupo', idGrupo)
+          .eq('id_usuario', idUsuario)
+          .maybeSingle();
+
+      return res?['rol'];
+    } catch (e) {
+      debugPrint('[GruposService] Error en obtenerMiRol: $e');
+      return null;
     }
   }
 }
