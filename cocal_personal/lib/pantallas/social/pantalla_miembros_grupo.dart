@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../servicios/social/grupos_service.dart';
-
+import '../../servicios/social/modelos_grupo.dart';
 class PantallaMiembrosGrupo extends StatefulWidget {
   final GrupoResumen grupo;
 

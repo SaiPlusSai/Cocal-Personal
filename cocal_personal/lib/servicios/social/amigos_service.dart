@@ -1,58 +1,7 @@
 // lib/servicios/social/amigos_service.dart
 import 'package:flutter/foundation.dart';
 import '../supabase_service.dart';
-
-class UsuarioResumen {
-  final int id;
-  final String nombre;
-  final String apellido;
-  final String correo;
-
-  UsuarioResumen({
-    required this.id,
-    required this.nombre,
-    required this.apellido,
-    required this.correo,
-  });
-
-  factory UsuarioResumen.fromMap(Map<String, dynamic> map) {
-    return UsuarioResumen(
-      id: map['id'] as int,
-      nombre: map['nombre'] ?? '',
-      apellido: map['apellido'] ?? '',
-      correo: map['correo'] ?? '',
-    );
-  }
-}
-
-class SolicitudAmistad {
-  final int id;              // id de la fila en "solicitudes"
-  final int idRemitente;
-  final String nombreRemitente;
-  final String nombreDestinatario;
-  final bool aceptada;
-  final DateTime creadaEn;
-
-  SolicitudAmistad({
-    required this.id,
-    required this.idRemitente,
-    required this.nombreRemitente,
-    required this.nombreDestinatario,
-    required this.aceptada,
-    required this.creadaEn,
-  });
-
-  factory SolicitudAmistad.fromMap(Map<String, dynamic> map) {
-    return SolicitudAmistad(
-      id: map['id'] as int,
-      idRemitente: map['id_usuario'] ?? map['id_remitente'] ?? 0,
-      nombreRemitente: map['nombre_remitente'] ?? '',
-      nombreDestinatario: map['nombre_destinatario'] ?? '',
-      aceptada: map['aceptada'] ?? false,
-      creadaEn: DateTime.parse(map['creada_en']),
-    );
-  }
-}
+import 'modelos_amigos.dart';
 
 class AmigosService {
   static final _db = SupabaseService.cliente;
@@ -72,7 +21,9 @@ class AmigosService {
         .maybeSingle();
 
     if (row == null) {
-      throw Exception('No se encontró al usuario con correo $correo en tabla usuario');
+      throw Exception(
+        'No se encontró al usuario con correo $correo en tabla usuario',
+      );
     }
     return row;
   }
@@ -87,7 +38,9 @@ class AmigosService {
         .select('id, nombre, apellido, correo')
         .neq('correo', miCorreo)
         .or(
-      'nombre.ilike.%$query%,apellido.ilike.%$query%,correo.ilike.%$query%',
+      'nombre.ilike.%$query%,'
+          'apellido.ilike.%$query%,'
+          'correo.ilike.%$query%',
     )
         .limit(30);
 
@@ -129,7 +82,8 @@ class AmigosService {
         return 'Usuario destino no encontrado';
       }
 
-      final nombreDest = '${dest['nombre']} ${dest['apellido'] ?? ''}'.trim();
+      final nombreDest =
+      '${dest['nombre']} ${dest['apellido'] ?? ''}'.trim();
 
       await _db.from('solicitudes').insert({
         'id_usuario': idDestinatario,
@@ -155,7 +109,10 @@ class AmigosService {
 
     final rows = await _db
         .from('solicitudes')
-        .select('id, id_remitente, nombre_remitente, nombre_destinatario, aceptada, creada_en, id_usuario')
+        .select(
+      'id, id_remitente, nombre_remitente, nombre_destinatario, '
+          'aceptada, creada_en, id_usuario',
+    )
         .eq('id_usuario', miId)
         .eq('aceptada', false)
         .order('creada_en', ascending: false);
@@ -205,6 +162,7 @@ class AmigosService {
 
     return (rows as List).isNotEmpty;
   }
+
   /// Lista de amigos (usuarios con solicitud aceptada con el usuario actual)
   static Future<List<UsuarioResumen>> obtenerAmigos() async {
     final me = await _getUsuarioActualRow();
@@ -250,5 +208,4 @@ class AmigosService {
         .map((e) => UsuarioResumen.fromMap(e as Map<String, dynamic>))
         .toList();
   }
-
 }

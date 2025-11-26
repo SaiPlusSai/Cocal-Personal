@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../servicios/social/grupos_service.dart';
 import 'pantalla_crear_grupo.dart';
 import 'pantalla_detalle_grupo.dart';
+import '../../servicios/social/modelos_grupo.dart';
 
 class PantallaGrupos extends StatefulWidget {
   const PantallaGrupos({super.key});

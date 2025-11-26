@@ -1,8 +1,9 @@
 //lib/pantallas/social/foro/pantalla_foro_grupo.dart
 import 'package:flutter/material.dart';
-import '../../../servicios/social/grupos_service.dart';
 import '../../../servicios/social/foros_service.dart';
 import 'pantalla_tema_foro.dart';
+import '../../../servicios/social/modelos_grupo.dart';
+import '../../../servicios/social/modelos_foro.dart';
 
 class PantallaForoGrupo extends StatefulWidget {
   final GrupoResumen grupo;
