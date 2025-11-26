@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../servicios/social/grupos_service.dart';
 import 'pantalla_invitar_amigos_grupo.dart';
 import 'pantalla_miembros_grupo.dart';
+import 'foro/pantalla_foro_grupo.dart';
 
 class PantallaDetalleGrupo extends StatefulWidget {
   final GrupoResumen grupo;
@@ -140,6 +141,23 @@ class _PantallaDetalleGrupoState extends State<PantallaDetalleGrupo> {
               ],
             ),
 
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PantallaForoGrupo(grupo: widget.grupo),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.forum),
+                label: const Text('Ir al foro del grupo'),
+              ),
+            ),
             const SizedBox(height: 8),
             Expanded(
               child: _cargandoMiembros
