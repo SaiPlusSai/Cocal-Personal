@@ -5,6 +5,8 @@ import '../pantallas/autenticacion/pantalla_login.dart';
 import '../pantallas/principal/pantalla_principal.dart';
 import '../pantallas/autenticacion/pantalla_recuperar.dart';
 import '../pantallas/autenticacion/pantalla_nueva_contrasena.dart';
+import '../pantallas/social/pantalla_usuarios.dart';
+import '../pantallas/social/pantalla_solicitudes.dart';
 
 Map<String, WidgetBuilder> obtenerRutas() {
   return {
@@ -13,6 +15,9 @@ Map<String, WidgetBuilder> obtenerRutas() {
     '/principal': (_) => const PantallaPrincipal(),
     '/recuperar': (_) => const PantallaRecuperar(),
     '/nueva_contrasena': (_) => const PantallaNuevaContrasena(),
+    '/usuarios': (_) => const PantallaUsuarios(),
+    '/solicitudes': (_) => const PantallaSolicitudes(),
+
   };
 }
 
