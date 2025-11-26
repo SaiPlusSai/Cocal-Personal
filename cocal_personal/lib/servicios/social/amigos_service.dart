@@ -205,4 +205,50 @@ class AmigosService {
 
     return (rows as List).isNotEmpty;
   }
+  /// Lista de amigos (usuarios con solicitud aceptada con el usuario actual)
+  static Future<List<UsuarioResumen>> obtenerAmigos() async {
+    final me = await _getUsuarioActualRow();
+    final miId = me['id'] as int;
+
+    // 1) Buscar solicitudes aceptadas donde estoy como destinatario o remitente
+    final rows = await _db
+        .from('solicitudes')
+        .select('id_usuario, id_remitente, aceptada')
+        .eq('aceptada', true)
+        .or('id_usuario.eq.$miId,id_remitente.eq.$miId');
+
+    final lista = rows as List;
+
+    // 2) Sacar los IDs de los otros usuarios (los amigos)
+    final Set<int> idsAmigos = {};
+
+    for (final raw in lista) {
+      final map = raw as Map<String, dynamic>;
+      final idUsuario = map['id_usuario'] as int?;
+      final idRemitente = map['id_remitente'] as int?;
+
+      if (idUsuario == null || idRemitente == null) continue;
+
+      if (idUsuario == miId) {
+        idsAmigos.add(idRemitente);
+      } else if (idRemitente == miId) {
+        idsAmigos.add(idUsuario);
+      }
+    }
+
+    if (idsAmigos.isEmpty) {
+      return [];
+    }
+
+    // 3) Traer datos de esos usuarios de la tabla "usuario"
+    final usuariosRows = await _db
+        .from('usuario')
+        .select('id, nombre, apellido, correo')
+        .inFilter('id', idsAmigos.toList());
+
+    return (usuariosRows as List)
+        .map((e) => UsuarioResumen.fromMap(e as Map<String, dynamic>))
+        .toList();
+  }
+
 }

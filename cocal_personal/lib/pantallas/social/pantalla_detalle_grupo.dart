@@ -1,5 +1,8 @@
+//lib/pantallas/social/pantalla_detalle_grupo.dart
 import 'package:flutter/material.dart';
 import '../../servicios/social/grupos_service.dart';
+import 'pantalla_invitar_amigos_grupo.dart';
+import 'pantalla_miembros_grupo.dart';
 
 class PantallaDetalleGrupo extends StatefulWidget {
   final GrupoResumen grupo;
@@ -72,6 +75,25 @@ class _PantallaDetalleGrupoState extends State<PantallaDetalleGrupo> {
     return Scaffold(
       appBar: AppBar(
         title: Text(g.nombre),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person_add),
+            tooltip: 'Invitar amigos',
+            onPressed: () async {
+              final added = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => PantallaInvitarAmigosAGrupo(grupo: g),
+                ),
+              );
+
+              if (added == true) {
+                _cargarMiembros(); // tu función para recargar miembros
+              }
+            },
+          ),
+
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -92,15 +114,32 @@ class _PantallaDetalleGrupoState extends State<PantallaDetalleGrupo> {
             ),
             const SizedBox(height: 16),
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Icon(Icons.people),
-                const SizedBox(width: 8),
-                Text(
-                  'Miembros',
-                  style: Theme.of(context).textTheme.titleMedium,
+                Row(
+                  children: [
+                    const Icon(Icons.people),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Miembros',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ],
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PantallaMiembrosGrupo(grupo: widget.grupo),
+                      ),
+                    );
+                  },
+                  child: const Text("Administrar"),
                 ),
               ],
             ),
+
             const SizedBox(height: 8),
             Expanded(
               child: _cargandoMiembros
@@ -143,6 +182,8 @@ class _PantallaDetalleGrupoState extends State<PantallaDetalleGrupo> {
           ],
         ),
       ),
+
     );
+
   }
 }

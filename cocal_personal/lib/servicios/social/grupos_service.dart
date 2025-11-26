@@ -1,4 +1,3 @@
-//lib/servicios/social/grupos_service.dart
 import 'package:flutter/foundation.dart';
 import '../supabase_service.dart';
 
@@ -7,7 +6,7 @@ class GrupoResumen {
   final String nombre;
   final String? descripcion;
   final String visibilidad;
-  final String rol; // rol del usuario en ese grupo (DUENO, MIEMBRO, etc.)
+  final String rol; // rol del usuario en ese grupo (DUENO, ADMIN, MIEMBRO, etc.)
 
   GrupoResumen({
     required this.id,
@@ -20,7 +19,7 @@ class GrupoResumen {
   factory GrupoResumen.fromMap(Map<String, dynamic> map) {
     return GrupoResumen(
       id: map['id'] as int,
-      nombre: map['nombre'] as String,
+      nombre: map['nombre'] as String? ?? '',
       descripcion: map['descripcion'] as String?,
       visibilidad: map['visibilidad'] as String? ?? 'PUBLICO',
       rol: map['rol'] as String? ?? 'MIEMBRO',
@@ -29,27 +28,44 @@ class GrupoResumen {
 }
 
 class MiembroGrupo {
+  final int idPerfilGrupo;   // PK de perfil_grupo
   final int idUsuario;
   final String nombre;
   final String apellido;
-  final String rol;
-  final String estado;
+  final String correo;
+  final String rol;          // DUENO / ADMIN / MIEMBRO...
+  final String estado;       // ACTIVO / SUSPENDIDO...
+  final DateTime unidoEn;
+  final bool esActual;       // si es el usuario logueado
 
   MiembroGrupo({
+    required this.idPerfilGrupo,
     required this.idUsuario,
     required this.nombre,
     required this.apellido,
+    required this.correo,
     required this.rol,
     required this.estado,
+    required this.unidoEn,
+    required this.esActual,
   });
 
-  factory MiembroGrupo.fromMap(Map<String, dynamic> map) {
+  factory MiembroGrupo.fromMap(
+      Map<String, dynamic> map,
+      int idUsuarioActual,
+      ) {
+    final usuario = map['usuario'] as Map<String, dynamic>?;
+
     return MiembroGrupo(
+      idPerfilGrupo: map['id'] as int,
       idUsuario: map['id_usuario'] as int,
-      nombre: map['nombre'] as String? ?? '',
-      apellido: map['apellido'] as String? ?? '',
+      nombre: usuario?['nombre'] as String? ?? '',
+      apellido: usuario?['apellido'] as String? ?? '',
+      correo: usuario?['correo'] as String? ?? '',
       rol: map['rol'] as String? ?? 'MIEMBRO',
       estado: map['estado'] as String? ?? 'ACTIVO',
+      unidoEn: DateTime.parse(map['unido_en'].toString()),
+      esActual: (map['id_usuario'] as int) == idUsuarioActual,
     );
   }
 
@@ -59,25 +75,46 @@ class MiembroGrupo {
 class GruposService {
   static final _db = SupabaseService.cliente;
 
-  // 🔐 Helper: obtener id de la tabla usuario a partir del auth.currentUser
-  static Future<int?> _obtenerUsuarioActualId() async {
+  // ===== Helpers usuario actual =====
+
+  /// Devuelve la fila completa de tabla "usuario" para el auth.currentUser
+  static Future<Map<String, dynamic>> _getUsuarioActualRow() async {
     final user = _db.auth.currentUser;
-    if (user == null || user.email == null) return null;
+    if (user == null || user.email == null) {
+      throw Exception('No hay usuario autenticado');
+    }
 
     try {
       final data = await _db
           .from('usuario')
-          .select('id')
+          .select('id, nombre, apellido, correo')
           .eq('correo', user.email!)
           .maybeSingle();
 
-      if (data == null) return null;
-      return data['id'] as int;
+      if (data == null) {
+        throw Exception(
+          'No se encontró usuario con correo ${user.email} en tabla usuario',
+        );
+      }
+
+      return data;
     } catch (e) {
       debugPrint('[GruposService] Error obteniendo usuario actual: $e');
+      rethrow;
+    }
+  }
+
+  /// Versión que solo devuelve el id (por comodidad)
+  static Future<int?> _obtenerUsuarioActualId() async {
+    try {
+      final row = await _getUsuarioActualRow();
+      return row['id'] as int;
+    } catch (_) {
       return null;
     }
   }
+
+  // ===== Grupos =====
 
   /// Crear grupo y asignar al usuario actual como DUENO
   static Future<String?> crearGrupo({
@@ -86,8 +123,8 @@ class GruposService {
     String visibilidad = 'PUBLICO', // debe coincidir con el enum
   }) async {
     try {
-      final idUsuario = await _obtenerUsuarioActualId();
-      if (idUsuario == null) return 'No se pudo identificar al usuario actual';
+      final me = await _getUsuarioActualRow();
+      final idUsuario = me['id'] as int;
 
       // 1) Insertar en grupo
       final inserted = await _db
@@ -96,7 +133,7 @@ class GruposService {
         'nombre': nombre,
         'descripcion': descripcion,
         'visibilidad': visibilidad,
-        'creador': idUsuario.toString(), // o correo si prefieres
+        'creador': me['correo'] as String? ?? idUsuario.toString(),
       })
           .select()
           .single();
@@ -148,26 +185,45 @@ class GruposService {
     return out;
   }
 
-  /// Miembros de un grupo
+  /// ¿El usuario actual es ADMIN/DUENO en este grupo?
+  static Future<bool> esAdminDeGrupo(int idGrupo) async {
+    try {
+      final me = await _getUsuarioActualRow();
+      final miId = me['id'] as int;
+
+      final rows = await _db
+          .from('perfil_grupo')
+          .select('id, rol')
+          .eq('id_grupo', idGrupo)
+          .eq('id_usuario', miId)
+          .inFilter('rol', ['DUENO', 'ADMIN'])
+          .limit(1);
+
+      return (rows as List).isNotEmpty;
+    } catch (e) {
+      debugPrint('[GruposService] Error esAdminDeGrupo: $e');
+      return false;
+    }
+  }
+
+  /// Miembros de un grupo (con info del usuario)
   static Future<List<MiembroGrupo>> obtenerMiembros(int idGrupo) async {
     final List<MiembroGrupo> out = [];
     try {
+      final me = await _getUsuarioActualRow();
+      final miId = me['id'] as int;
+
       final res = await _db
           .from('perfil_grupo')
-          .select('id_usuario, rol, estado, usuario ( nombre, apellido )')
-          .eq('id_grupo', idGrupo);
+          .select(
+        'id, id_usuario, rol, estado, unido_en, usuario ( id, nombre, apellido, correo )',
+      )
+          .eq('id_grupo', idGrupo)
+          .order('unido_en', ascending: true);
 
       for (final row in (res as List)) {
-        final u = row['usuario'] as Map<String, dynamic>?;
-
-        final map = {
-          'id_usuario': row['id_usuario'],
-          'rol': row['rol'],
-          'estado': row['estado'],
-          'nombre': u?['nombre'],
-          'apellido': u?['apellido'],
-        };
-        out.add(MiembroGrupo.fromMap(map));
+        final map = row as Map<String, dynamic>;
+        out.add(MiembroGrupo.fromMap(map, miId));
       }
     } catch (e) {
       debugPrint('[GruposService] Error al obtener miembros del grupo: $e');
@@ -178,20 +234,20 @@ class GruposService {
   /// Salir de un grupo (elimina el perfil_grupo)
   static Future<String?> salirDeGrupo(int idGrupo) async {
     try {
-      final idUsuario = await _obtenerUsuarioActualId();
-      if (idUsuario == null) return 'No se pudo identificar al usuario actual';
+      final me = await _getUsuarioActualRow();
+      final idUsuario = me['id'] as int;
 
       // Si es DUENO podrías impedir que salga sin transferir propiedad
-      final miembros = await _db
+      final miembro = await _db
           .from('perfil_grupo')
           .select('id, rol')
           .eq('id_grupo', idGrupo)
           .eq('id_usuario', idUsuario)
           .maybeSingle();
 
-      if (miembros == null) return 'No perteneces a este grupo';
+      if (miembro == null) return 'No perteneces a este grupo';
 
-      if (miembros['rol'] == 'DUENO') {
+      if (miembro['rol'] == 'DUENO') {
         return 'El dueño del grupo no puede salir directamente. Transfiere el rol o elimina el grupo.';
       }
 
@@ -205,6 +261,89 @@ class GruposService {
     } catch (e) {
       debugPrint('[GruposService] Error al salir del grupo: $e');
       return 'No se pudo salir del grupo';
+    }
+  }
+
+  /// Agregar un usuario (amigo) a un grupo como miembro
+  static Future<String?> agregarMiembro({
+    required int idGrupo,
+    required int idUsuario,
+    String rol = 'MIEMBRO',
+  }) async {
+    try {
+      // 1) Verificar si ya es miembro
+      final existente = await _db
+          .from('perfil_grupo')
+          .select('id')
+          .eq('id_grupo', idGrupo)
+          .eq('id_usuario', idUsuario)
+          .maybeSingle();
+
+      if (existente != null) {
+        return 'Este usuario ya pertenece al grupo';
+      }
+
+      // 2) Insertar como miembro
+      await _db.from('perfil_grupo').insert({
+        'id_usuario': idUsuario,
+        'id_grupo': idGrupo,
+        'rol': rol,
+        'estado': 'ACTIVO',
+      });
+
+      return null;
+    } catch (e) {
+      debugPrint('[GruposService] Error al agregar miembro: $e');
+      return 'No se pudo agregar al usuario al grupo';
+    }
+  }
+
+  /// Cambiar rol de un miembro
+  static Future<String?> cambiarRolMiembro({
+    required int idPerfilGrupo,
+    required String nuevoRol, // 'ADMIN', 'MIEMBRO', etc.
+  }) async {
+    try {
+      await _db
+          .from('perfil_grupo')
+          .update({'rol': nuevoRol})
+          .eq('id', idPerfilGrupo);
+
+      return null;
+    } catch (e) {
+      debugPrint('[GruposService] Error cambiarRolMiembro: $e');
+      return 'No se pudo cambiar el rol';
+    }
+  }
+
+  /// Suspender / reactivar miembro (cambiar estado)
+  static Future<String?> cambiarEstadoMiembro({
+    required int idPerfilGrupo,
+    required String nuevoEstado, // 'ACTIVO' / 'SUSPENDIDO'
+  }) async {
+    try {
+      await _db
+          .from('perfil_grupo')
+          .update({'estado': nuevoEstado})
+          .eq('id', idPerfilGrupo);
+
+      return null;
+    } catch (e) {
+      debugPrint('[GruposService] Error cambiarEstadoMiembro: $e');
+      return 'No se pudo cambiar el estado';
+    }
+  }
+
+  /// Eliminar miembro del grupo
+  static Future<String?> eliminarMiembro({
+    required int idPerfilGrupo,
+  }) async {
+    try {
+      await _db.from('perfil_grupo').delete().eq('id', idPerfilGrupo);
+      return null;
+    } catch (e) {
+      debugPrint('[GruposService] Error eliminarMiembro: $e');
+      return 'No se pudo eliminar al miembro';
     }
   }
 }
