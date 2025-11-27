@@ -1,5 +1,9 @@
+//lib/pantallas/perfil/pantalla_editar_perfil.dart
+
 import 'package:flutter/material.dart';
 import '../../servicios/autenticacion/perfil_service.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class PantallaEditarPerfil extends StatefulWidget {
   const PantallaEditarPerfil({super.key});
@@ -14,6 +18,8 @@ class _PantallaEditarPerfilState extends State<PantallaEditarPerfil> {
   final _apellidoCtrl = TextEditingController();
   bool _cargando = true;
   bool _guardando = false;
+  XFile? _imagenSeleccionada;
+  final _picker = ImagePicker();
 
   @override
   void initState() {
@@ -29,6 +35,17 @@ class _PantallaEditarPerfilState extends State<PantallaEditarPerfil> {
     }
     setState(() => _cargando = false);
   }
+  Future<void> _seleccionarImagen() async {
+    final img = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 75,
+    );
+
+    if (img != null) {
+      setState(() => _imagenSeleccionada = img);
+    }
+  }
+
 
   Future<void> _guardar() async {
     if (!_formKey.currentState!.validate()) return;
@@ -43,6 +60,9 @@ class _PantallaEditarPerfilState extends State<PantallaEditarPerfil> {
     setState(() => _guardando = false);
 
     if (!mounted) return;
+    if (_imagenSeleccionada != null) {
+      await PerfilService.subirFotoPerfil(_imagenSeleccionada!);
+    }
 
     if (error != null) {
       ScaffoldMessenger.of(context)
@@ -73,6 +93,19 @@ class _PantallaEditarPerfilState extends State<PantallaEditarPerfil> {
           key: _formKey,
           child: Column(
             children: [
+              GestureDetector(
+                onTap: _seleccionarImagen,
+                child: CircleAvatar(
+                  radius: 55,
+                  backgroundImage: _imagenSeleccionada != null
+                      ? FileImage(File(_imagenSeleccionada!.path))
+                      : null,
+                  child: _imagenSeleccionada == null
+                      ? const Icon(Icons.camera_alt, size: 40)
+                      : null,
+                ),
+              ),
+
               TextFormField(
                 controller: _nombreCtrl,
                 decoration: const InputDecoration(labelText: 'Nombre'),

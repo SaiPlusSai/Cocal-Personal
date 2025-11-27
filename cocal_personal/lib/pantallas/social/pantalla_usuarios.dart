@@ -50,9 +50,6 @@ class _PantallaUsuariosState extends State<PantallaUsuarios> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Usuarios'),
-      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

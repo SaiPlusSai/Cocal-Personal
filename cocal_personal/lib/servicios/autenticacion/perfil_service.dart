@@ -113,9 +113,12 @@ class PerfilService {
 
     try {
       final bytes = await imagen.readAsBytes();
-      final path = 'user_${user.id}.jpg';
 
-      // subir al bucket
+      // 👇 IMPORTANTE: primer segmento del path = uid del usuario
+      // Esto hace que (storage.foldername(name))[1] = auth.uid()
+      final path = '${user.id}/avatar.jpg';
+
+      // subir al bucket "avatars"
       await _storage.from('avatars').uploadBinary(
         path,
         bytes,
@@ -143,4 +146,5 @@ class PerfilService {
       return null;
     }
   }
+
 }
