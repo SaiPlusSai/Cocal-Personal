@@ -7,6 +7,9 @@ import '../pantallas/autenticacion/pantalla_recuperar.dart';
 import '../pantallas/autenticacion/pantalla_nueva_contrasena.dart';
 import '../pantallas/social/pantalla_usuarios.dart';
 import '../pantallas/social/pantalla_solicitudes.dart';
+import '../pantallas/perfil/pantalla_perfil.dart';
+import '../pantallas/perfil/pantalla_configuracion.dart';
+import '../pantallas/perfil/pantalla_editar_perfil.dart';
 
 Map<String, WidgetBuilder> obtenerRutas() {
   return {
@@ -17,6 +20,9 @@ Map<String, WidgetBuilder> obtenerRutas() {
     '/nueva_contrasena': (_) => const PantallaNuevaContrasena(),
     '/usuarios': (_) => const PantallaUsuarios(),
     '/solicitudes': (_) => const PantallaSolicitudes(),
+    '/perfil': (_) => const PantallaPerfil(),
+    '/configuracion': (_) => const PantallaConfiguracion(),
+    '/editar-perfil': (_) => const PantallaEditarPerfil(),
 
   };
 }

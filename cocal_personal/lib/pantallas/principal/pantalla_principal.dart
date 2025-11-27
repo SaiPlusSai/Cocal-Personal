@@ -3,7 +3,7 @@ import '../../servicios/autenticacion/autenticacion_service.dart';
 import '../../servicios/supabase_service.dart';
 import '../calendario/pantalla_calendarios.dart';
 import '../social/pantalla_grupos.dart';
-
+import '../../widgets/drawer_usuario.dart';
 class PantallaPrincipal extends StatefulWidget {
   const PantallaPrincipal({super.key}); // 👈 ya no pide correo
 
@@ -61,18 +61,14 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: DrawerUsuario(
+        nombre: nombreUsuario ?? 'Usuario',
+        apellido: apellidoUsuario ?? '',
+        correo: correoUsuario ?? '',
+      ),
       appBar: AppBar(
         title: const Text('CoCal - Dashboard'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Cerrar sesión',
-            onPressed: () async {
-              await AutenticacionService.cerrarSesion();
-              if (!context.mounted) return;
-              Navigator.pushReplacementNamed(context, '/login');
-            },
-          ),
           IconButton(
             icon: const Icon(Icons.notifications),
             tooltip: 'Solicitudes',

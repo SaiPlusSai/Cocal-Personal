@@ -1,6 +1,7 @@
 // lib/pantallas/social/pantalla_usuarios.dart
 import 'package:flutter/material.dart';
 import '../../servicios/social/amigos_service.dart';
+import '../../servicios/social/modelos_amigos.dart';
 
 class PantallaUsuarios extends StatefulWidget {
   const PantallaUsuarios({super.key});

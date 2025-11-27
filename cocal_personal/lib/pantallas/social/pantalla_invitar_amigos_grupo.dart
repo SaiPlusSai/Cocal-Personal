@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../servicios/social/grupos_service.dart';
 import '../../servicios/social/amigos_service.dart';
+import '../../servicios/social/modelos_amigos.dart';
+import '../../servicios/social/modelos_grupo.dart';
 
 class PantallaInvitarAmigosAGrupo extends StatefulWidget {
   final GrupoResumen grupo;

@@ -1,6 +1,7 @@
 // lib/pantallas/social/pantalla_solicitudes.dart
 import 'package:flutter/material.dart';
 import '../../servicios/social/amigos_service.dart';
+import '../../servicios/social/modelos_amigos.dart';
 
 class PantallaSolicitudes extends StatefulWidget {
   const PantallaSolicitudes({super.key});

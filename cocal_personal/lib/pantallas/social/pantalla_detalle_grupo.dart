@@ -4,6 +4,7 @@ import '../../servicios/social/grupos_service.dart';
 import 'pantalla_invitar_amigos_grupo.dart';
 import 'pantalla_miembros_grupo.dart';
 import 'foro/pantalla_foro_grupo.dart';
+import '../../servicios/social/modelos_grupo.dart';
 
 class PantallaDetalleGrupo extends StatefulWidget {
   final GrupoResumen grupo;

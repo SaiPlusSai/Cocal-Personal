@@ -1,7 +1,7 @@
 // cocal_personal/lib/servicios/autenticacion/autenticacion_service.dart
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../supabase_service.dart';
-
+import 'perfil_service.dart';
 
 class AutenticacionService {
   static final _auth = SupabaseService.cliente.auth;
@@ -42,6 +42,10 @@ class AutenticacionService {
   }) async {
     try {
       await _auth.signInWithPassword(email: correo, password: contrasena);
+
+      // 👇 después de loguear, sincronizamos perfil en la tabla `usuario`
+      await PerfilService.ensurePerfilDesdeAuth();
+
       return null;
     } on AuthException catch (e) {
       return e.message;
@@ -49,6 +53,7 @@ class AutenticacionService {
       return 'Error al iniciar sesión: $e';
     }
   }
+
 
   static Future<void> cerrarSesion() => _auth.signOut();
 
