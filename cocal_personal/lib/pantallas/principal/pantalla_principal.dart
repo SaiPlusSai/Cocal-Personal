@@ -15,6 +15,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   String? correoUsuario;
   String? nombreUsuario;
   String? apellidoUsuario;
+  String? fotoUrlUsuario;
   bool cargando = true;
 
   @override
@@ -39,7 +40,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
 
       final res = await cliente
           .from('usuario')
-          .select('nombre, apellido')
+          .select('nombre, apellido, foto_url')
           .eq('correo', correo)
           .maybeSingle();
 
@@ -47,6 +48,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         setState(() {
           nombreUsuario = res['nombre'] ?? 'Usuario';
           apellidoUsuario = res['apellido'] ?? '';
+          fotoUrlUsuario  = res['foto_url'];
         });
       }
     } catch (e) {
@@ -65,6 +67,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         nombre: nombreUsuario ?? 'Usuario',
         apellido: apellidoUsuario ?? '',
         correo: correoUsuario ?? '',
+        fotoUrl: fotoUrlUsuario,
       ),
       appBar: AppBar(
         title: const Text('CoCal - Dashboard'),

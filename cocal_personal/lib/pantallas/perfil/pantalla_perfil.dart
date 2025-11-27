@@ -1,3 +1,4 @@
+//lib/pantallas/perfil/pantalla_perfil.dart
 import 'package:flutter/material.dart';
 import '../../servicios/supabase_service.dart';
 
@@ -13,6 +14,8 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
   String apellido = '';
   String correo = '';
   bool cargando = true;
+  String? fotoUrl;
+
 
   @override
   void initState() {
@@ -37,6 +40,8 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
       apellido = res['apellido'] ?? '';
       correo = res['correo'];
       cargando = false;
+      fotoUrl = res['foto_url'];
+
     });
   }
 
@@ -54,9 +59,14 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            const CircleAvatar(
+            CircleAvatar(
               radius: 50,
-              child: Icon(Icons.person, size: 50),
+              backgroundImage: fotoUrl != null
+                  ? NetworkImage('$fotoUrl?v=${DateTime.now().millisecondsSinceEpoch}')
+                  : null,
+              child: fotoUrl == null
+                  ? const Icon(Icons.person, size: 50)
+                  : null,
             ),
             const SizedBox(height: 20),
             Text('$nombre $apellido',
@@ -66,9 +76,10 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
             const Spacer(),
             ElevatedButton.icon(
               icon: const Icon(Icons.edit),
-              label: const Text('Editar perfail'),
+              label: const Text('Editar perfil'),
               onPressed: () {
                 Navigator.pushNamed(context, '/editar-perfil');
+                _cargarPerfil();
               },
             )
           ],
