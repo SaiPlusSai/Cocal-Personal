@@ -130,9 +130,6 @@ class _PantallaCalendariosState extends State<PantallaCalendarios> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('📅 Mis calendarios'),
-      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _crearCalendario,
         backgroundColor: Colors.indigo,

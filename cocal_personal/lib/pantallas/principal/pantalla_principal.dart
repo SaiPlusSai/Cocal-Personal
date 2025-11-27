@@ -3,9 +3,11 @@ import '../../servicios/autenticacion/autenticacion_service.dart';
 import '../../servicios/supabase_service.dart';
 import '../calendario/pantalla_calendarios.dart';
 import '../social/pantalla_grupos.dart';
+import '../social/pantalla_usuarios.dart';
 import '../../widgets/drawer_usuario.dart';
+
 class PantallaPrincipal extends StatefulWidget {
-  const PantallaPrincipal({super.key}); // 👈 ya no pide correo
+  const PantallaPrincipal({super.key});
 
   @override
   State<PantallaPrincipal> createState() => _PantallaPrincipalState();
@@ -17,6 +19,8 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
   String? apellidoUsuario;
   String? fotoUrlUsuario;
   bool cargando = true;
+
+  int _indiceActual = 0; // 0 = Calendario, 1 = Buscar, 2 = Grupos
 
   @override
   void initState() {
@@ -36,7 +40,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       }
 
       final correo = user.email!;
-      correoUsuario = correo; // lo guardamos para usarlo luego
+      correoUsuario = correo;
 
       final res = await cliente
           .from('usuario')
@@ -48,7 +52,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         setState(() {
           nombreUsuario = res['nombre'] ?? 'Usuario';
           apellidoUsuario = res['apellido'] ?? '';
-          fotoUrlUsuario  = res['foto_url'];
+          fotoUrlUsuario = res['foto_url'];
         });
       }
     } catch (e) {
@@ -58,6 +62,47 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         cargando = false;
       });
     }
+  }
+
+  String _tituloActual() {
+    switch (_indiceActual) {
+      case 0:
+        return 'Tu calendario';
+      case 1:
+        return 'Buscar usuarios';
+      case 2:
+        return 'Grupos';
+      default:
+        return 'CoCal';
+    }
+  }
+
+  Widget _cuerpoActual() {
+    if (cargando) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    switch (_indiceActual) {
+      case 0:
+      // Vista calendario (lista de calendarios + luego entras a eventos)
+        return PantallaCalendarios(
+          correo: correoUsuario ?? '',
+        );
+      case 1:
+      // Búsqueda de usuarios
+        return const PantallaUsuarios();
+      case 2:
+      // Lista de grupos
+        return const PantallaGrupos();
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  void _onTabTapped(int index) {
+    setState(() {
+      _indiceActual = index;
+    });
   }
 
   @override
@@ -70,7 +115,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         fotoUrl: fotoUrlUsuario,
       ),
       appBar: AppBar(
-        title: const Text('CoCal - Dashboard'),
+        title: Text(_tituloActual()),
         actions: [
           IconButton(
             icon: const Icon(Icons.notifications),
@@ -81,120 +126,28 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           ),
         ],
       ),
-      body: cargando
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '👋 ¡Hola, ${nombreUsuario ?? 'usuario'} ${apellidoUsuario ?? ''}!',
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 30),
-            Expanded(
-              child: GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                children: [
-                  _tarjetaAcceso(
-                    icono: Icons.calendar_month,
-                    titulo: 'Calendario',
-                    color: Colors.indigo,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => PantallaCalendarios(
-                            correo: correoUsuario ?? '',
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                  _tarjetaAcceso(
-                    icono: Icons.event,
-                    titulo: 'Eventos',
-                    color: Colors.purple,
-                    onTap: () => _mostrarSnack('Abrir eventos...'),
-                  ),
-                  _tarjetaAcceso(
-                    icono: Icons.settings,
-                    titulo: 'Configuración',
-                    color: Colors.orange,
-                    onTap: () => _mostrarSnack('Abrir configuración...'),
-                  ),
-                  _tarjetaAcceso(
-                    icono: Icons.search,
-                    titulo: 'Usuarios',
-                    color: Colors.teal,
-                    onTap: () => Navigator.pushNamed(context, '/usuarios'),
-                  ),
-                  _tarjetaAcceso(
-                    icono: Icons.group,
-                    titulo: 'Grupos',
-                    color: Colors.green,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const PantallaGrupos(),
-                        ),
-                      );
-                    },
-                  ),
-
-
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _tarjetaAcceso({
-    required IconData icono,
-    required String titulo,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Card(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 4,
-        color: color.withOpacity(0.15),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icono, color: color, size: 50),
-              const SizedBox(height: 10),
-              Text(
-                titulo,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-            ],
+      body: _cuerpoActual(),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _indiceActual,
+        onTap: _onTabTapped,
+        selectedItemColor: Colors.indigo,
+        unselectedItemColor: Colors.grey,
+        showUnselectedLabels: true,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_month),
+            label: 'Calendario',
           ),
-        ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search),
+            label: 'Buscar',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat_bubble_outline),
+            label: 'Grupos',
+          ),
+        ],
       ),
-    );
-  }
-
-  void _mostrarSnack(String mensaje) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(mensaje)),
     );
   }
 }

@@ -47,9 +47,6 @@ class _PantallaGruposState extends State<PantallaGrupos> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mis grupos'),
-      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _nuevoGrupo,
         child: const Icon(Icons.group_add),
