@@ -2,9 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 
-import '../../servicios/servicio_calendario.dart';
+import '../../servicios/calendario/servicio_calendario.dart';
 import '../../servicios/social/modelos_grupo.dart';
 import '../../servicios/social/grupos_service.dart';
+import 'dialogos/dialogo_crear_evento.dart';
 
 class PantallaCalendarioGeneral extends StatefulWidget {
   final String correo;
@@ -28,6 +29,16 @@ class _PantallaCalendarioGeneralState
 
   Map<DateTime, List<Map<String, dynamic>>> _eventos = {};
 
+  /// Temas disponibles para el diálogo de crear evento
+  final List<String> _temasDisponibles = const [
+    'MUSICA',
+    'PELICULA',
+    'VIDEOJUEGOS',
+    'ANIME',
+    'LITERATURA',
+    'DEPORTES',
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -48,9 +59,11 @@ class _PantallaCalendarioGeneralState
 
       setState(() {
         _misGrupos = grupos;
+        _cargando = false;
       });
     } catch (e) {
       debugPrint('[CAL_GENERAL] Error en _cargarTodo: $e');
+      setState(() => _cargando = false);
     }
   }
 
@@ -187,6 +200,61 @@ class _PantallaCalendarioGeneralState
     );
   }
 
+  /// Crear un nuevo evento desde el calendario general.
+  /// Usamos el "calendario personal" del usuario (primer calendario de listarCalendariosDeUsuario).
+  Future<void> _crearNuevoEvento() async {
+    try {
+      final idUsuario =
+      await ServicioCalendario.obtenerUsuarioIdPorCorreo(widget.correo);
+
+      if (idUsuario == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo obtener el usuario actual')),
+        );
+        return;
+      }
+
+      final calendariosPersonales =
+      await ServicioCalendario.listarCalendariosDeUsuario(idUsuario);
+
+      if (calendariosPersonales.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No tienes un calendario personal creado'),
+          ),
+        );
+        return;
+      }
+
+      // Por diseño, tomamos el primero como calendario personal
+      final int idCalendarioPersonal =
+      calendariosPersonales.first['id'] as int;
+
+      final creado = await DialogoCrearEvento.mostrar(
+        context: context,
+        idCalendario: idCalendarioPersonal,
+        temasDisponibles: _temasDisponibles,
+        onEventoCreado: _cargarEventos,
+      );
+
+      if (creado && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Evento creado correctamente ✅'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('❌ Error al crear evento: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_cargando) {
@@ -195,55 +263,71 @@ class _PantallaCalendarioGeneralState
 
     final eventosDelDia = _getEventosDelDia(_selectedDay ?? _focusedDay);
 
-    return Column(
+    return Stack(
       children: [
-        _buildFiltrosGrupos(),
-        TableCalendar(
-          focusedDay: _focusedDay,
-          firstDay: DateTime.utc(2020, 1, 1),
-          lastDay: DateTime.utc(2100, 12, 31),
-          selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-          eventLoader: _getEventosDelDia,
-          onDaySelected: (selected, focused) {
-            setState(() {
-              _selectedDay = selected;
-              _focusedDay = focused;
-            });
-          },
-          calendarBuilders: CalendarBuilders(
-            markerBuilder: (context, day, events) {
-              final key = DateTime(day.year, day.month, day.day);
-              final tieneCoincidencia = _diasConCoincidencias.contains(key);
+        Column(
+          children: [
+            _buildFiltrosGrupos(),
+            TableCalendar(
+              focusedDay: _focusedDay,
+              firstDay: DateTime.utc(2020, 1, 1),
+              lastDay: DateTime.utc(2100, 12, 31),
+              selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+              eventLoader: _getEventosDelDia,
+              onDaySelected: (selected, focused) {
+                setState(() {
+                  _selectedDay = selected;
+                  _focusedDay = focused;
+                });
+              },
+              calendarBuilders: CalendarBuilders(
+                markerBuilder: (context, day, events) {
+                  final key = DateTime(day.year, day.month, day.day);
+                  final tieneCoincidencia =
+                  _diasConCoincidencias.contains(key);
 
-              if (!tieneCoincidencia) return null;
+                  if (!tieneCoincidencia) return null;
 
-              return Align(
-                alignment: Alignment.bottomCenter,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: Colors.redAccent,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              );
-            },
-          ),
+                  return Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.redAccent,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const Divider(),
+            Expanded(
+              child: eventosDelDia.isEmpty
+                  ? const Center(child: Text('No tienes eventos este día.'))
+                  : ListView.builder(
+                itemCount: eventosDelDia.length,
+                itemBuilder: (_, i) {
+                  final ev = eventosDelDia[i];
+                  return ListTile(
+                    title: Text(ev['titulo'] ?? 'Sin título'),
+                    subtitle: Text(ev['descripcion'] ?? ''),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
-        const Divider(),
-        Expanded(
-          child: eventosDelDia.isEmpty
-              ? const Center(child: Text('No tienes eventos este día.'))
-              : ListView.builder(
-            itemCount: eventosDelDia.length,
-            itemBuilder: (_, i) {
-              final ev = eventosDelDia[i];
-              return ListTile(
-                title: Text(ev['titulo'] ?? 'Sin título'),
-                subtitle: Text(ev['descripcion'] ?? ''),
-              );
-            },
+
+        // FAB dentro del Stack, abajo a la derecha
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: FloatingActionButton(
+            onPressed: _crearNuevoEvento,
+            backgroundColor: Colors.indigo,
+            child: const Icon(Icons.add),
           ),
         ),
       ],
