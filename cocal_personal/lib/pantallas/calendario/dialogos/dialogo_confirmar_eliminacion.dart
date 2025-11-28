@@ -1,3 +1,4 @@
+//lib/pantallas/calendario/dialogos/dialogo_confirmar_eliminacion.dart
 import 'package:flutter/material.dart';
 
 class DialogoConfirmarEliminacion {

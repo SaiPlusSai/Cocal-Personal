@@ -205,6 +205,45 @@ class ServicioCalendario {
       return [];
     }
   }
+  /// Devuelve el calendario PRINCIPAL del grupo.
+  /// Si no existe, lo crea y lo vincula al grupo.
+  static Future<CalendarioModel?> obtenerOCrearCalendarioDeGrupo(
+      int idGrupo, {
+        String? nombre,
+      }) async {
+    try {
+      // 1) ¿Ya hay calendarios asociados al grupo?
+      final existentes = await listarCalendariosDeGrupo(idGrupo);
+
+      if (existentes.isNotEmpty) {
+        return CalendarioModel.fromMap(
+            Map<String, dynamic>.from(existentes.first));
+      }
+
+      // 2) Si no hay, creamos uno nuevo como colaborativo
+      final error = await crearCalendarioDeGrupo(
+        idGrupo: idGrupo,
+        nombre: nombre ?? 'Calendario de grupo #$idGrupo',
+      );
+
+      if (error != null) {
+        debugPrint(
+            '[CAL_SERV] Error al crear calendario de grupo: $error');
+        return null;
+      }
+
+      // 3) Volvemos a listar y devolvemos el primero
+      final nuevos = await listarCalendariosDeGrupo(idGrupo);
+      if (nuevos.isEmpty) return null;
+
+      return CalendarioModel.fromMap(
+          Map<String, dynamic>.from(nuevos.first));
+    } catch (e) {
+      debugPrint(
+          '[CAL_SERV] Error obtenerOCrearCalendarioDeGrupo: $e');
+      return null;
+    }
+  }
 
   /// Eventos de todos los miembros de un grupo en un rango.
   static Future<List<Map<String, dynamic>>> listarEventosDeGrupoEnRango({
@@ -320,4 +359,60 @@ class ServicioCalendario {
       return 'Error al copiar eventos: $e';
     }
   }
+
+  /// Devuelve el calendario personal del usuario.
+  /// Si no existe, lo crea. Ignora los calendarios que están ligados a grupos.
+  static Future<CalendarioModel?> obtenerOCrearCalendarioPersonal(
+      int idUsuario) async {
+    try {
+      // 1) Calendarios que "parecen" personales (id_usuario = usuario actual)
+      final res = await _cliente
+          .from('calendario')
+          .select('id, id_usuario, nombre, zona_horaria, creado_en')
+          .eq('id_usuario', idUsuario);
+
+      final lista = List<Map<String, dynamic>>.from(res as List);
+
+      if (lista.isNotEmpty) {
+        // 2) Ver cuáles están ligados a grupos
+        final ids = lista.map((c) => c['id'] as int).toList();
+
+        final rel = await _cliente
+            .from('grupo_calendario')
+            .select('id_calendario')
+            .inFilter('id_calendario', ids);
+
+        final idsGrupo =
+        (rel as List).map((r) => r['id_calendario'] as int).toSet();
+
+        // 3) Preferimos uno que NO esté en grupo_calendario
+        final soloPersonales =
+        lista.where((c) => !idsGrupo.contains(c['id'] as int)).toList();
+
+        final elegido =
+        soloPersonales.isNotEmpty ? soloPersonales.first : lista.first;
+
+        return CalendarioModel.fromMap(elegido);
+      }
+
+      // 4) Si no tiene ninguno, creamos uno nuevo como "personal"
+      final insert = await _cliente
+          .from('calendario')
+          .insert({
+        'id_usuario': idUsuario,
+        'nombre': 'Calendario personal',
+        'zona_horaria': 'America/La_Paz',
+      })
+          .select('id, id_usuario, nombre, zona_horaria, creado_en')
+          .single();
+
+      return CalendarioModel.fromMap(
+          Map<String, dynamic>.from(insert as Map));
+    } catch (e) {
+      debugPrint(
+          '[CAL_SERV] Error obtenerOCrearCalendarioPersonal: $e');
+      return null;
+    }
+  }
+
 }

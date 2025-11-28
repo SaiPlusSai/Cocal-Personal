@@ -301,6 +301,12 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
                 _focusedDay = focused;
               });
             },
+            onPageChanged: (focused) {
+              _focusedDay = focused;
+              if (widget.idGrupo != null) {
+                _calcularCoincidenciasGrupo(); // recalcular al cambiar de mes
+              }
+            },
             calendarStyle: const CalendarStyle(
               todayDecoration: BoxDecoration(
                 color: Colors.indigo,
@@ -310,6 +316,30 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
                 color: Colors.deepPurple,
                 shape: BoxShape.circle,
               ),
+            ),
+            calendarBuilders: CalendarBuilders(
+              markerBuilder: (context, day, events) {
+                // Solo marcamos si estamos viendo esto como calendario de grupo
+                if (widget.idGrupo == null) return null;
+
+                final key = DateTime(day.year, day.month, day.day);
+                final tieneCoincidencia =
+                _diasConCoincidenciasGrupo.contains(key);
+
+                if (!tieneCoincidencia) return null;
+
+                return Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: Colors.redAccent,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                );
+              },
             ),
           ),
           FiltrosEventosCalendario(

@@ -211,27 +211,29 @@ class _PantallaCalendarioGeneralState
       if (idUsuario == null) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No se pudo obtener el usuario actual')),
+          const SnackBar(
+              content: Text('No se pudo obtener el usuario actual')),
         );
         return;
       }
 
-      final calendariosPersonales =
-      await ServicioCalendario.listarCalendariosDeUsuario(idUsuario);
+      // 👉 Ahora usamos SIEMPRE un solo calendario personal
+      final calPersonal =
+      await ServicioCalendario.obtenerOCrearCalendarioPersonal(
+          idUsuario);
 
-      if (calendariosPersonales.isEmpty) {
+      if (calPersonal == null) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('No tienes un calendario personal creado'),
+            content:
+            Text('No se pudo obtener/crear tu calendario personal'),
           ),
         );
         return;
       }
 
-      // Por diseño, tomamos el primero como calendario personal
-      final int idCalendarioPersonal =
-      calendariosPersonales.first['id'] as int;
+      final int idCalendarioPersonal = calPersonal.id;
 
       final creado = await DialogoCrearEvento.mostrar(
         context: context,
@@ -255,6 +257,7 @@ class _PantallaCalendarioGeneralState
       );
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
