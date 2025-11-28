@@ -9,7 +9,6 @@ class ForosService {
   // =========================
   //  USUARIO ACTUAL
   // =========================
-
   static Future<Map<String, dynamic>> _getUsuarioActualRow() async {
     final user = _db.auth.currentUser;
     if (user == null || user.email == null) {
@@ -25,14 +24,12 @@ class ForosService {
     if (row == null) {
       throw Exception('Usuario no encontrado en tabla usuario');
     }
-
     return row;
   }
 
   // =========================
-  //  FORO
+  //  FOROS Y TEMAS
   // =========================
-
   static Future<ForoResumen> obtenerOCrearForoDeGrupo(int idGrupo) async {
     try {
       final existing = await _db
@@ -42,20 +39,14 @@ class ForosService {
           .limit(1)
           .maybeSingle();
 
-      if (existing != null) {
-        return ForoResumen.fromMap(existing);
-      }
+      if (existing != null) return ForoResumen.fromMap(existing);
 
       final me = await _getUsuarioActualRow();
       final autor = '${me['nombre']} ${me['apellido'] ?? ''}'.trim();
 
       final inserted = await _db
           .from('foro')
-          .insert({
-        'id_grupo': idGrupo,
-        'titulo': 'Foro general',
-        'autor': autor,
-      })
+          .insert({'id_grupo': idGrupo, 'titulo': 'Foro general', 'autor': autor})
           .select()
           .single();
 
@@ -66,10 +57,6 @@ class ForosService {
     }
   }
 
-  // =========================
-  //  TEMAS
-  // =========================
-
   static Future<List<TemaForoResumen>> obtenerTemas(int idForo) async {
     try {
       final res = await _db
@@ -78,19 +65,14 @@ class ForosService {
           .eq('id_foro', idForo)
           .order('creado_en', ascending: false);
 
-      return (res as List)
-          .map((e) => TemaForoResumen.fromMap(e))
-          .toList();
+      return (res as List).map((e) => TemaForoResumen.fromMap(e)).toList();
     } catch (e) {
       debugPrint('[ForosService] Error obtenerTemas: $e');
       return [];
     }
   }
 
-  static Future<String?> crearTema({
-    required int idForo,
-    required String titulo,
-  }) async {
+  static Future<String?> crearTema({required int idForo, required String titulo}) async {
     try {
       final me = await _getUsuarioActualRow();
       final autor = '${me['nombre']} ${me['apellido'] ?? ''}'.trim();
@@ -110,14 +92,11 @@ class ForosService {
   // =========================
   //  POSTS + REACCIONES
   // =========================
-
   static Future<List<PostForo>> obtenerPosts(int idTema) async {
     try {
       final posts = await _db
           .from('post_del_foro')
-          .select(
-        'id, id_tema, autor, contenido, creado_en, editado_en, estado',
-      )
+          .select('id, id_tema, autor, contenido, creado_en, editado_en, estado, id_comentario_padre')
           .eq('id_tema', idTema)
           .order('creado_en', ascending: true);
 
@@ -132,8 +111,7 @@ class ForosService {
 
       final me = await _getUsuarioActualRow();
       final miCorreo = me['correo'] as String;
-      final miNombreCompleto =
-      '${me['nombre']} ${me['apellido'] ?? ''}'.trim();
+      final miNombreCompleto = '${me['nombre']} ${me['apellido'] ?? ''}'.trim();
 
       final Map<int, Map<String, int>> conteos = {};
       final Map<int, String?> miReaccion = {};
@@ -146,15 +124,12 @@ class ForosService {
         conteos.putIfAbsent(idPost, () => {});
         conteos[idPost]![tipo] = (conteos[idPost]![tipo] ?? 0) + 1;
 
-        if (autor == miCorreo) {
-          miReaccion[idPost] = tipo;
-        }
+        if (autor == miCorreo) miReaccion[idPost] = tipo;
       }
 
       return posts.map<PostForo>((p) {
         final id = p['id'] as int;
         final autorPost = p['autor'] as String? ?? '';
-
         final esActual = autorPost == miNombreCompleto;
 
         return PostForo.fromMap(
@@ -173,6 +148,7 @@ class ForosService {
   static Future<String?> crearPost({
     required int idTema,
     required String contenido,
+    int? idComentarioPadre,
   }) async {
     try {
       final me = await _getUsuarioActualRow();
@@ -183,6 +159,7 @@ class ForosService {
         'autor': autor,
         'contenido': contenido,
         'estado': 'PUBLICADO',
+        'id_comentario_padre': idComentarioPadre,
       });
       return null;
     } catch (e) {
@@ -210,17 +187,10 @@ class ForosService {
         if (existente['tipo'] == tipo) {
           await _db.from('reaccion').delete().eq('id', existente['id']);
         } else {
-          await _db
-              .from('reaccion')
-              .update({'tipo': tipo})
-              .eq('id', existente['id']);
+          await _db.from('reaccion').update({'tipo': tipo}).eq('id', existente['id']);
         }
       } else {
-        await _db.from('reaccion').insert({
-          'id_post': idPost,
-          'tipo': tipo,
-          'autor': correo,
-        });
+        await _db.from('reaccion').insert({'id_post': idPost, 'tipo': tipo, 'autor': correo});
       }
       return null;
     } catch (e) {
