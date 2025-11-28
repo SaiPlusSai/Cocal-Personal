@@ -36,11 +36,12 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
   CalendarFormat _calendarFormat = CalendarFormat.month;
 
   final temasDisponibles = const [
-    'TRABAJO',
-    'ESTUDIO',
-    'HOBBIES',
-    'SALUD',
-    'OTROS'
+    'MUSICA',
+    'PELICULA',
+    'VIDEOJUEGOS',
+    'ANIME',
+    'LITERATURA',
+    'DEPORTES',
   ];
 
   final estadosDisponibles = const ['ACTIVO', 'EN_DESARROLLO', 'INACTIVO'];
@@ -64,19 +65,23 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
 
   Color _colorPorTema(String? tema) {
     switch (tema) {
-      case 'TRABAJO':
+      case 'MUSICA':
         return Colors.indigo;
-      case 'ESTUDIO':
+      case 'PELICULA':
         return Colors.deepPurple;
-      case 'HOBBIES':
+      case 'VIDEOJUEGOS':
         return Colors.teal;
-      case 'SALUD':
-        return Colors.redAccent;
-      case 'OTROS':
+      case 'ANIME':
+        return Colors.pinkAccent;
+      case 'LITERATURA':
+        return Colors.brown;
+      case 'DEPORTES':
+        return Colors.green;
       default:
         return Colors.grey;
     }
   }
+
 
   Future<void> _cargarEventos() async {
     setState(() => _cargando = true);

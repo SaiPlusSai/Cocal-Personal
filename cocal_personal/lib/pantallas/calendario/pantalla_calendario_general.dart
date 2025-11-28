@@ -6,6 +6,7 @@ import '../../servicios/calendario/servicio_calendario.dart';
 import '../../servicios/social/modelos_grupo.dart';
 import '../../servicios/social/grupos_service.dart';
 import 'dialogos/dialogo_crear_evento.dart';
+import 'pantalla_detalle_evento.dart';
 
 class PantallaCalendarioGeneral extends StatefulWidget {
   final String correo;
@@ -310,9 +311,26 @@ class _PantallaCalendarioGeneralState
                 itemCount: eventosDelDia.length,
                 itemBuilder: (_, i) {
                   final ev = eventosDelDia[i];
+
                   return ListTile(
                     title: Text(ev['titulo'] ?? 'Sin título'),
                     subtitle: Text(ev['descripcion'] ?? ''),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PantallaDetalleEvento(
+                            evento: ev,
+                            onGuardado: () async {
+                              // cuando se guarda/elimina en el detalle,
+                              // recargamos los eventos del calendario general
+                              await _cargarEventos();
+                              await _calcularCoincidenciasGrupoSeleccionado();
+                            },
+                          ),
+                        ),
+                      );
+                    },
                   );
                 },
               ),
