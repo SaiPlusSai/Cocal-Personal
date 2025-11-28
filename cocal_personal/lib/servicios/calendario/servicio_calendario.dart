@@ -1,7 +1,10 @@
-//lib/servicios/servicio_calendario.dart
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'supabase_service.dart';
+// lib/servicios/calendario/servicio_calendario.dart
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../supabase_service.dart';
+import 'modelos/calendario_model.dart';
+import 'modelos/evento_model.dart';
 
 class ServicioCalendario {
   static final _cliente = SupabaseService.cliente;
@@ -23,7 +26,8 @@ class ServicioCalendario {
   }
 
   /// Lista todos los calendarios del usuario (por id_usuario).
-  static Future<List<Map<String, dynamic>>> listarCalendariosDeUsuario(int idUsuario) async {
+  static Future<List<Map<String, dynamic>>> listarCalendariosDeUsuario(
+      int idUsuario) async {
     try {
       final res = await _cliente
           .from('calendario')
@@ -31,8 +35,7 @@ class ServicioCalendario {
           .eq('id_usuario', idUsuario)
           .order('creado_en', ascending: false);
 
-      // `res` ya es una lista de mapas en Supabase v2
-      return List<Map<String, dynamic>>.from(res);
+      return List<Map<String, dynamic>>.from(res as List);
     } catch (e) {
       return [];
     }
@@ -56,7 +59,7 @@ class ServicioCalendario {
     }
   }
 
-  /// Elimina un calendario por id (y en cascada sus eventos si la FK está ON DELETE CASCADE).
+  /// Elimina un calendario por id.
   static Future<String?> eliminarCalendario(int idCalendario) async {
     try {
       await _cliente.from('calendario').delete().eq('id', idCalendario);
@@ -66,19 +69,14 @@ class ServicioCalendario {
     }
   }
 
-  /// Lista todos los calendarios que “afectan” al usuario:
-  /// - los que creó él (id_usuario)
-  /// - los compartidos directo (calendario_compartido_usuario)
-  /// - los que ve por grupo (calendario_compartido_grupo + perfil_grupo)
+  /// Lista todos los calendarios que afectan al usuario.
   static Future<List<int>> obtenerCalendariosVisiblesDelUsuario(
       int idUsuario) async {
     final c = SupabaseService.cliente;
     debugPrint('[CAL_SERV] obtenerCalendariosVisiblesDelUsuario → $idUsuario');
 
-    final propios = await c
-        .from('calendario')
-        .select('id')
-        .eq('id_usuario', idUsuario);
+    final propios =
+    await c.from('calendario').select('id').eq('id_usuario', idUsuario);
 
     final compartidosDirectos = await c
         .from('calendario_compartido_usuario')
@@ -96,8 +94,10 @@ class ServicioCalendario {
       compartidosGrupos = await c
           .from('calendario_compartido_grupo')
           .select('id_calendario, id_grupo')
-          .inFilter('id_grupo',
-          gruposList.map((g) => g['id_grupo'] as int).toList());
+          .inFilter(
+        'id_grupo',
+        gruposList.map((g) => g['id_grupo'] as int).toList(),
+      );
     }
 
     final ids = <int>{};
@@ -116,8 +116,7 @@ class ServicioCalendario {
     return ids.toList();
   }
 
-
-  /// Obtiene todos los eventos del usuario en un rango de fechas
+  /// Obtiene todos los eventos del usuario en un rango de fechas.
   static Future<List<Map<String, dynamic>>> listarEventosUsuarioEnRango({
     required List<int> idsCalendario,
     required DateTime desde,
@@ -133,20 +132,16 @@ class ServicioCalendario {
         .lte('horario', hasta.toUtc().toIso8601String())
         .order('horario', ascending: true);
 
-    return List<Map<String, dynamic>>.from(res);
+    return List<Map<String, dynamic>>.from(res as List);
   }
 
-  // lib/servicios/servicio_calendario.dart
-
-  /// Crea un calendario ligado a un grupo (calendario colaborativo).
+  /// Crea un calendario ligado a un grupo (colaborativo).
   static Future<String?> crearCalendarioDeGrupo({
     required int idGrupo,
     required String nombre,
     String zonaHoraria = 'America/La_Paz',
   }) async {
     try {
-      // 1) Opcional: dueño del calendario = creador del grupo o usuario actual.
-      // Para simplificar, usamos el usuario actual como propietario.
       final authUser = _cliente.auth.currentUser;
       if (authUser == null || authUser.email == null) {
         return 'No hay usuario autenticado';
@@ -162,7 +157,6 @@ class ServicioCalendario {
 
       final idUsuario = usuarioRow['id'] as int;
 
-      // 2) Crear calendario
       final cal = await _cliente
           .from('calendario')
           .insert({
@@ -175,17 +169,15 @@ class ServicioCalendario {
 
       final idCalendario = cal['id'] as int;
 
-      // 3) Asociarlo al grupo (colaborativo)
       await _cliente.from('grupo_calendario').insert({
         'id_calendario': idCalendario,
         'id_grupo': idGrupo,
       });
 
-      // Opcional: también en calendario_compartido_grupo con permisos
       await _cliente.from('calendario_compartido_grupo').insert({
         'id_calendario': idCalendario,
         'id_grupo': idGrupo,
-        'permisos': 'EDICION', // o 'LECTURA'
+        'permisos': 'EDICION',
       });
 
       return null;
@@ -194,7 +186,7 @@ class ServicioCalendario {
     }
   }
 
-  /// Lista calendarios de un grupo (colaborativos)
+  /// Lista calendarios de un grupo (colaborativos).
   static Future<List<Map<String, dynamic>>> listarCalendariosDeGrupo(
       int idGrupo) async {
     try {
@@ -213,37 +205,33 @@ class ServicioCalendario {
       return [];
     }
   }
-  /// Eventos de todos los miembros de un grupo en un rango
+
+  /// Eventos de todos los miembros de un grupo en un rango.
   static Future<List<Map<String, dynamic>>> listarEventosDeGrupoEnRango({
     required int idGrupo,
     required DateTime desde,
     required DateTime hasta,
   }) async {
-    // 1) miembros del grupo
     final miembros = await _cliente
         .from('perfil_grupo')
         .select('id_usuario')
         .eq('id_grupo', idGrupo);
 
-    final idsMiembros = (miembros as List)
-        .map((m) => m['id_usuario'] as int)
-        .toList();
+    final idsMiembros =
+    (miembros as List).map((m) => m['id_usuario'] as int).toList();
 
     if (idsMiembros.isEmpty) return [];
 
-    // 2) calendarios de esos usuarios
     final cals = await _cliente
         .from('calendario')
         .select('id, id_usuario')
         .inFilter('id_usuario', idsMiembros);
 
-    final idsCalendarios = (cals as List)
-        .map((c) => c['id'] as int)
-        .toList();
+    final idsCalendarios =
+    (cals as List).map((c) => c['id'] as int).toList();
 
     if (idsCalendarios.isEmpty) return [];
 
-    // 3) eventos en esos calendarios
     final eventos = await _cliente
         .from('evento')
         .select('id, titulo, horario, id_calendario')
@@ -251,9 +239,8 @@ class ServicioCalendario {
         .gte('horario', desde.toUtc().toIso8601String())
         .lte('horario', hasta.toUtc().toIso8601String());
 
-    // Enriquecemos con id_usuario para poder contar por persona
     final mapaCalToUser = <int, int>{};
-    for (final c in cals) {
+    for (final c in cals as List) {
       mapaCalToUser[c['id'] as int] = c['id_usuario'] as int;
     }
 
@@ -265,12 +252,7 @@ class ServicioCalendario {
     }).toList();
   }
 
-  /// Copia todos los eventos de una categoría (tema) del calendario personal
-  /// del usuario actual hacia un calendario destino (por ejemplo, uno de grupo).
-  ///
-  /// IMPORTANTE:
-  /// - Por diseño solo deberías tener UN calendario personal.
-  /// - Aquí tomamos el primero de listarCalendariosDeUsuario() como "personal".
+  /// Copia todos los eventos de una categoría desde el calendario personal.
   static Future<String?> copiarEventosDeCategoriaACalendarioDestino({
     required int idCalendarioDestino,
     required String categoria,
@@ -281,7 +263,6 @@ class ServicioCalendario {
         return 'No hay usuario autenticado';
       }
 
-      // usuario actual
       final usuarioRow = await _cliente
           .from('usuario')
           .select('id, nombre, apellido, correo')
@@ -292,7 +273,6 @@ class ServicioCalendario {
 
       final int idUsuario = usuarioRow['id'] as int;
 
-      // calendario personal (por diseño debe ser uno)
       final calendariosPersonales =
       await listarCalendariosDeUsuario(idUsuario);
       if (calendariosPersonales.isEmpty) {
@@ -302,7 +282,6 @@ class ServicioCalendario {
       final int idCalendarioPersonal =
       calendariosPersonales.first['id'] as int;
 
-      // eventos de esa categoría en el calendario personal
       final eventos = await _cliente
           .from('evento')
           .select('*')
@@ -322,7 +301,7 @@ class ServicioCalendario {
           'titulo': e['titulo'],
           'descripcion': e['descripcion'],
           'horario': e['horario'],
-          'tema': e['tema'], // categoría
+          'tema': e['tema'],
           'estado': e['estado'],
           'visibilidad': e['visibilidad'],
           'recordatorio_minutos': e['recordatorio_minutos'],
@@ -341,6 +320,4 @@ class ServicioCalendario {
       return 'Error al copiar eventos: $e';
     }
   }
-
-
 }
