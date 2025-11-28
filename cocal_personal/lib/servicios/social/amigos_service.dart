@@ -208,4 +208,20 @@ class AmigosService {
         .map((e) => UsuarioResumen.fromMap(e as Map<String, dynamic>))
         .toList();
   }
+
+  /// Contar amigos de cualquier usuario (por ID)
+  static Future<int> contarAmigos(int usuarioId) async {
+    try {
+      final rows = await _db
+          .from('solicitudes')
+          .select('id')
+          .eq('aceptada', true)
+          .or('id_usuario.eq.$usuarioId,id_remitente.eq.$usuarioId');
+
+      return (rows as List).length;
+    } catch (e) {
+      debugPrint('[AMIGOS] Error contarAmigos: $e');
+      return 0;
+    }
+  }
 }
