@@ -1,6 +1,9 @@
+//lib/pantallas/calendario/pantalla_detalle_evento.dart
 import 'package:flutter/material.dart';
 import '../../servicios/supabase_service.dart';
 import '../../servicios/notificacion_service.dart';
+import '../../servicios/calendario/servicio_evento.dart';
+
 
 class PantallaDetalleEvento extends StatefulWidget {
   final Map<String, dynamic> evento;
@@ -193,6 +196,44 @@ class _PantallaDetalleEventoState extends State<PantallaDetalleEvento> {
       );
     }
   }
+  Future<void> _eliminarEvento() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Eliminar evento'),
+        content: const Text('¿Seguro que deseas eliminar este evento?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    try {
+      await ServicioEvento.eliminarEvento(widget.evento['id'] as int);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('🗑️ Evento eliminado')),
+      );
+
+      widget.onGuardado();      // recargar lista en la pantalla anterior
+      Navigator.pop(context);   // volver
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('❌ Error al eliminar: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -200,7 +241,15 @@ class _PantallaDetalleEventoState extends State<PantallaDetalleEvento> {
         '${_fecha.day}/${_fecha.month}/${_fecha.year} ${_hora.format(context)}';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('✏️ Editar evento')),
+      appBar: AppBar(title: const Text('✏️ Editar evento'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete),
+            onPressed: _eliminarEvento,
+          ),
+        ],
+      ),
+
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: SingleChildScrollView(
