@@ -1,3 +1,4 @@
+//lib/pantallas/calendario/pantalla_detalle_evento.dart
 import 'package:flutter/material.dart';
 import '../../servicios/supabase_service.dart';
 import '../../servicios/notificacion_service.dart';

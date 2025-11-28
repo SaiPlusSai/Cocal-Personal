@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../servicios/autenticacion/autenticacion_service.dart';
 import '../../servicios/supabase_service.dart';
-import '../calendario/pantalla_calendarios.dart';
+import '../calendario/pantalla_calendario_general.dart';
 import '../social/pantalla_grupos.dart';
 import '../social/pantalla_usuarios.dart';
 import '../../widgets/drawer_usuario.dart';
@@ -84,8 +84,8 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
 
     switch (_indiceActual) {
       case 0:
-      // Vista calendario (lista de calendarios + luego entras a eventos)
-        return PantallaCalendarios(
+      // Vista calendario general del usuario (el propio)
+        return PantallaCalendarioGeneral(
           correo: correoUsuario ?? '',
         );
       case 1:
