@@ -16,7 +16,7 @@ class PantallaEventosCalendario extends StatefulWidget {
   final int? idGrupo;
 
   const PantallaEventosCalendario({
-    super.key,
+    super.key,  
     required this.idCalendario,
     required this.nombreCalendario,
     this.idGrupo,
