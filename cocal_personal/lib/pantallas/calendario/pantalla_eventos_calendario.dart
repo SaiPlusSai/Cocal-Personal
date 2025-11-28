@@ -1,6 +1,6 @@
-//lib/pantallas/calendario/pantalla_eventos_calendario.dart
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
+
 import '../../servicios/calendario/servicio_calendario.dart';
 import '../../servicios/calendario/servicio_evento.dart';
 import 'dialogos/dialogo_crear_evento.dart';
@@ -16,7 +16,7 @@ class PantallaEventosCalendario extends StatefulWidget {
   final int? idGrupo;
 
   const PantallaEventosCalendario({
-    super.key,  
+    super.key,
     required this.idCalendario,
     required this.nombreCalendario,
     this.idGrupo,
@@ -50,7 +50,10 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
   String? _estadoSeleccionado;
   String _busqueda = '';
 
+  // 🔹 Coincidencias por día (para calendarios de grupo)
   final Set<DateTime> _diasConCoincidenciasGrupo = {};
+  final Map<DateTime, Set<int>> _usuariosCoincidenciaPorDia = {};
+  final Map<int, Color> _colorPorUsuario = {};
 
   @override
   void initState() {
@@ -82,7 +85,6 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
     }
   }
 
-
   Future<void> _cargarEventos() async {
     setState(() => _cargando = true);
     try {
@@ -110,8 +112,11 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
     }
   }
 
+  // 🔹 Coincidencias de grupo con paleta de colores por usuario
   Future<void> _calcularCoincidenciasGrupo() async {
     _diasConCoincidenciasGrupo.clear();
+    _usuariosCoincidenciaPorDia.clear();
+    _colorPorUsuario.clear();
 
     final idGrupo = widget.idGrupo;
     if (idGrupo == null) return;
@@ -138,6 +143,25 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
       mapa.putIfAbsent(dayKey, () => {});
       mapa[dayKey]!.putIfAbsent(slot, () => <int>{});
       mapa[dayKey]![slot]!.add(idUsuario);
+
+      // Día -> usuarios con evento ese día
+      _usuariosCoincidenciaPorDia.putIfAbsent(dayKey, () => <int>{});
+      _usuariosCoincidenciaPorDia[dayKey]!.add(idUsuario);
+
+      // Color estable para cada usuario
+      _colorPorUsuario.putIfAbsent(idUsuario, () {
+        const palette = [
+          Colors.purple,
+          Colors.green,
+          Colors.blue,
+          Colors.orange,
+          Colors.teal,
+          Colors.pink,
+          Colors.brown,
+        ];
+        final idx = _colorPorUsuario.length % palette.length;
+        return palette[idx];
+      });
     }
 
     const minimoUsuarios = 2;
@@ -237,21 +261,29 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
       );
     }
   }
+
   Future<void> _crearEvento() async {
+    final base = _selectedDay ?? _focusedDay;
+    final fechaInicial = DateTime(base.year, base.month, base.day);
+
     final creado = await DialogoCrearEvento.mostrar(
       context: context,
       idCalendario: widget.idCalendario,
       temasDisponibles: temasDisponibles,
+      fechaInicial: fechaInicial,
       onEventoCreado: _cargarEventos,
     );
 
-    if (creado) {
+    if (creado && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Evento creado correctamente ✅'),
           backgroundColor: Colors.green,
         ),
       );
+      if (widget.idGrupo != null) {
+        _calcularCoincidenciasGrupo();
+      }
     }
   }
 
@@ -261,8 +293,110 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
 
     await ServicioEvento.eliminarEvento(id);
     await _cargarEventos();
+    if (widget.idGrupo != null) {
+      await _calcularCoincidenciasGrupo();
+    }
   }
 
+  /// Celda custom para el calendario (días coloreados, coincidencias de grupo)
+  Widget _buildDayCell(
+      BuildContext context,
+      DateTime day,
+      DateTime focusedDay, {
+        bool isSelected = false,
+        bool isToday = false,
+      }) {
+    final events = _getEventosDelDia(day);
+    final key = DateTime(day.year, day.month, day.day);
+
+    final bool hayEventos = events.isNotEmpty;
+
+    // 🎨 Color base por tema (primer evento del día)
+    Color bgColor = Colors.transparent;
+    if (hayEventos) {
+      final primer = events.first;
+      final temaColor = _colorPorTema(primer['tema'] as String?);
+      bgColor = temaColor.withOpacity(0.18);
+    }
+
+    // 📌 Coincidencias de grupo (varios usuarios a la vez)
+    final usuarios = widget.idGrupo != null ? _usuariosCoincidenciaPorDia[key] : null;
+    final bool hayCoincidencia =
+        usuarios != null && usuarios.length >= 2 && _diasConCoincidenciasGrupo.contains(key);
+
+    if (hayCoincidencia) {
+      // si hay coincidencia, intensificamos
+      bgColor = (bgColor == Colors.transparent
+          ? Colors.orange
+          : bgColor.withOpacity(0.3))
+          .withOpacity(0.32);
+    }
+
+    Border? border;
+    if (isSelected) {
+      border = Border.all(color: Colors.deepPurple, width: 2);
+    } else if (isToday) {
+      border = Border.all(color: Colors.indigo, width: 1.6);
+    }
+
+    final textColor =
+    isSelected ? Colors.deepPurple.shade900 : Colors.black87;
+
+    // Pequeña barra de colores por usuario en la parte baja
+    Widget barraUsuarios = const SizedBox.shrink();
+    if (hayCoincidencia && usuarios != null) {
+      final colors = usuarios
+          .map((id) => _colorPorUsuario[id] ?? Colors.grey)
+          .toList();
+
+      barraUsuarios = Padding(
+        padding: const EdgeInsets.only(top: 2),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: colors
+              .take(4)
+              .map(
+                (c) => Container(
+              width: 6,
+              height: 6,
+              margin: const EdgeInsets.symmetric(horizontal: 1),
+              decoration: BoxDecoration(
+                color: c,
+                shape: BoxShape.circle,
+              ),
+            ),
+          )
+              .toList(),
+        ),
+      );
+    }
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      margin: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(10),
+        border: border,
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '${day.day}',
+              style: TextStyle(
+                fontWeight: hayEventos ? FontWeight.w600 : FontWeight.normal,
+                color: textColor,
+              ),
+            ),
+            barraUsuarios,
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -295,6 +429,15 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
             lastDay: DateTime.utc(2100, 12, 31),
             selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
             eventLoader: _getEventosDelDia,
+            calendarFormat: _calendarFormat,
+            availableCalendarFormats: const {
+              CalendarFormat.month: 'Mes',
+              CalendarFormat.twoWeeks: '2 semanas',
+              CalendarFormat.week: 'Semana',
+            },
+            onFormatChanged: (format) {
+              setState(() => _calendarFormat = format);
+            },
             onDaySelected: (selected, focused) {
               setState(() {
                 _selectedDay = selected;
@@ -304,42 +447,20 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
             onPageChanged: (focused) {
               _focusedDay = focused;
               if (widget.idGrupo != null) {
-                _calcularCoincidenciasGrupo(); // recalcular al cambiar de mes
+                _calcularCoincidenciasGrupo();
               }
             },
             calendarStyle: const CalendarStyle(
-              todayDecoration: BoxDecoration(
-                color: Colors.indigo,
-                shape: BoxShape.circle,
-              ),
-              selectedDecoration: BoxDecoration(
-                color: Colors.deepPurple,
-                shape: BoxShape.circle,
-              ),
+              outsideDaysVisible: false,
             ),
             calendarBuilders: CalendarBuilders(
-              markerBuilder: (context, day, events) {
-                // Solo marcamos si estamos viendo esto como calendario de grupo
-                if (widget.idGrupo == null) return null;
-
-                final key = DateTime(day.year, day.month, day.day);
-                final tieneCoincidencia =
-                _diasConCoincidenciasGrupo.contains(key);
-
-                if (!tieneCoincidencia) return null;
-
-                return Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: Colors.redAccent,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                );
-              },
+              defaultBuilder: (context, day, focusedDay) =>
+                  _buildDayCell(context, day, focusedDay),
+              todayBuilder: (context, day, focusedDay) =>
+                  _buildDayCell(context, day, focusedDay, isToday: true),
+              selectedBuilder: (context, day, focusedDay) =>
+                  _buildDayCell(context, day, focusedDay,
+                      isSelected: true),
             ),
           ),
           FiltrosEventosCalendario(
@@ -348,7 +469,8 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
             temaSeleccionado: _temaSeleccionado,
             estadoSeleccionado: _estadoSeleccionado,
             busqueda: _busqueda,
-            onBusquedaChanged: (v) => setState(() => _busqueda = v),
+            onBusquedaChanged: (v) =>
+                setState(() => _busqueda = v),
             onTemaChanged: (t) =>
                 setState(() => _temaSeleccionado = t),
             onEstadoChanged: (e) =>
@@ -379,7 +501,7 @@ class _PantallaEventosCalendarioState extends State<PantallaEventosCalendario> {
                       ),
                     );
                   },
-                  onDelete: () => _eliminarEvento(ev['id']),
+                  onDelete: () => _eliminarEvento(ev['id'] as int),
                 );
               },
             ),

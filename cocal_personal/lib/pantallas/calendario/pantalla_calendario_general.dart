@@ -1,4 +1,3 @@
-// lib/pantallas/calendario/pantalla_calendario_general.dart
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 
@@ -18,8 +17,7 @@ class PantallaCalendarioGeneral extends StatefulWidget {
       _PantallaCalendarioGeneralState();
 }
 
-class _PantallaCalendarioGeneralState
-    extends State<PantallaCalendarioGeneral> {
+class _PantallaCalendarioGeneralState extends State<PantallaCalendarioGeneral> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   bool _cargando = true;
@@ -27,10 +25,10 @@ class _PantallaCalendarioGeneralState
   List<GrupoResumen> _misGrupos = [];
   int? _grupoSeleccionadoId;
   final Set<DateTime> _diasConCoincidencias = {};
-
   Map<DateTime, List<Map<String, dynamic>>> _eventos = {};
 
-  /// Temas disponibles para el diálogo de crear evento
+  CalendarFormat _calendarFormat = CalendarFormat.month;
+
   final List<String> _temasDisponibles = const [
     'MUSICA',
     'PELICULA',
@@ -43,19 +41,13 @@ class _PantallaCalendarioGeneralState
   @override
   void initState() {
     super.initState();
-    debugPrint('[CAL_GENERAL] initState');
     _selectedDay = _focusedDay;
     _cargarTodo();
   }
 
   Future<void> _cargarTodo() async {
-    debugPrint('[CAL_GENERAL] _cargarTodo()');
     try {
-      // 1) grupos del usuario
       final grupos = await GruposService.obtenerMisGrupos();
-      debugPrint('[CAL_GENERAL] grupos cargados: ${grupos.length}');
-
-      // 2) eventos propios (calendarios visibles)
       await _cargarEventos();
 
       setState(() {
@@ -63,18 +55,15 @@ class _PantallaCalendarioGeneralState
         _cargando = false;
       });
     } catch (e) {
-      debugPrint('[CAL_GENERAL] Error en _cargarTodo: $e');
       setState(() => _cargando = false);
     }
   }
 
   Future<void> _cargarEventos() async {
-    debugPrint('[CAL_GENERAL] _cargarEventos() para ${widget.correo}');
     setState(() => _cargando = true);
 
     final idUsuario =
     await ServicioCalendario.obtenerUsuarioIdPorCorreo(widget.correo);
-    debugPrint('[CAL_GENERAL] idUsuario = $idUsuario');
 
     if (idUsuario == null) {
       setState(() => _cargando = false);
@@ -84,21 +73,23 @@ class _PantallaCalendarioGeneralState
     final idsCal =
     await ServicioCalendario.obtenerCalendariosVisiblesDelUsuario(
         idUsuario);
-    debugPrint('[CAL_GENERAL] idsCal visibles: $idsCal');
 
     final desde = DateTime(_focusedDay.year, _focusedDay.month - 1, 1);
-    final hasta =
-    DateTime(_focusedDay.year, _focusedDay.month + 2, 0, 23, 59);
+    final hasta = DateTime(
+      _focusedDay.year,
+      _focusedDay.month + 2,
+      0,
+      23,
+      59,
+    );
 
     final lista = await ServicioCalendario.listarEventosUsuarioEnRango(
       idsCalendario: idsCal,
       desde: desde,
       hasta: hasta,
     );
-    debugPrint('[CAL_GENERAL] eventos personales cargados: ${lista.length}');
 
     final mapa = <DateTime, List<Map<String, dynamic>>>{};
-
     for (final ev in lista) {
       final fecha = DateTime.parse(ev['horario']).toLocal();
       final key = DateTime(fecha.year, fecha.month, fecha.day);
@@ -116,16 +107,19 @@ class _PantallaCalendarioGeneralState
     _diasConCoincidencias.clear();
 
     final idGrupo = _grupoSeleccionadoId;
-    debugPrint('[CAL_GENERAL] calcularCoincidencias para grupo: $idGrupo');
-
     if (idGrupo == null) {
-      setState(() {}); // limpiar marcas
+      setState(() {});
       return;
     }
 
     final desde = DateTime(_focusedDay.year, _focusedDay.month - 1, 1);
-    final hasta =
-    DateTime(_focusedDay.year, _focusedDay.month + 2, 0, 23, 59);
+    final hasta = DateTime(
+      _focusedDay.year,
+      _focusedDay.month + 2,
+      0,
+      23,
+      59,
+    );
 
     final eventosGrupo =
     await ServicioCalendario.listarEventosDeGrupoEnRango(
@@ -134,10 +128,6 @@ class _PantallaCalendarioGeneralState
       hasta: hasta,
     );
 
-    debugPrint(
-        '[CAL_GENERAL] eventos de grupo recibidos: ${eventosGrupo.length}');
-
-    // Mapa: (día -> {slotHora -> set<idUsuario>})
     final Map<DateTime, Map<int, Set<int>>> mapa = {};
 
     for (final ev in eventosGrupo) {
@@ -151,21 +141,19 @@ class _PantallaCalendarioGeneralState
       mapa[dayKey]![slot]!.add(idUsuario);
     }
 
-    const minimoUsuarios = 2; // mínimo para marcar coincidencia
+    const minimoUsuarios = 2;
 
     for (final entry in mapa.entries) {
       final day = entry.key;
       final slots = entry.value;
+
       final hayCoincidencia =
       slots.values.any((setUsuarios) => setUsuarios.length >= minimoUsuarios);
-
       if (hayCoincidencia) {
         _diasConCoincidencias.add(day);
       }
     }
 
-    debugPrint(
-        '[CAL_GENERAL] días con coincidencias: ${_diasConCoincidencias.length}');
     setState(() {});
   }
 
@@ -190,8 +178,7 @@ class _PantallaCalendarioGeneralState
             selected: seleccionado,
             onSelected: (_) async {
               setState(() {
-                _grupoSeleccionadoId =
-                seleccionado ? null : g.id; // deseleccionar si se repite
+                _grupoSeleccionadoId = seleccionado ? null : g.id;
               });
               await _calcularCoincidenciasGrupoSeleccionado();
             },
@@ -201,8 +188,6 @@ class _PantallaCalendarioGeneralState
     );
   }
 
-  /// Crear un nuevo evento desde el calendario general.
-  /// Usamos el "calendario personal" del usuario (primer calendario de listarCalendariosDeUsuario).
   Future<void> _crearNuevoEvento() async {
     try {
       final idUsuario =
@@ -212,33 +197,33 @@ class _PantallaCalendarioGeneralState
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('No se pudo obtener el usuario actual')),
-        );
-        return;
-      }
-
-      // 👉 Ahora usamos SIEMPRE un solo calendario personal
-      final calPersonal =
-      await ServicioCalendario.obtenerOCrearCalendarioPersonal(
-          idUsuario);
-
-      if (calPersonal == null) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content:
-            Text('No se pudo obtener/crear tu calendario personal'),
+            content: Text('No se pudo obtener el usuario actual'),
           ),
         );
         return;
       }
 
-      final int idCalendarioPersonal = calPersonal.id;
+      final calPersonal =
+      await ServicioCalendario.obtenerOCrearCalendarioPersonal(idUsuario);
+
+      if (calPersonal == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se pudo obtener/crear tu calendario personal'),
+          ),
+        );
+        return;
+      }
+
+      final base = _selectedDay ?? _focusedDay;
+      final fechaInicial = DateTime(base.year, base.month, base.day);
 
       final creado = await DialogoCrearEvento.mostrar(
         context: context,
-        idCalendario: idCalendarioPersonal,
+        idCalendario: calPersonal.id,
         temasDisponibles: _temasDisponibles,
+        fechaInicial: fechaInicial,
         onEventoCreado: _cargarEventos,
       );
 
@@ -249,15 +234,71 @@ class _PantallaCalendarioGeneralState
             backgroundColor: Colors.green,
           ),
         );
+        await _calcularCoincidenciasGrupoSeleccionado();
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('❌ Error al crear evento: $e')),
+        SnackBar(
+          content: Text('❌ Error al crear evento: $e'),
+        ),
       );
     }
   }
 
+  /// Celda para el calendario general: días con eventos pintados y
+  /// coincidencias de grupo resaltadas.
+  Widget _buildDayCell(
+      BuildContext context,
+      DateTime day,
+      DateTime focusedDay, {
+        bool isSelected = false,
+        bool isToday = false,
+      }) {
+    final events = _getEventosDelDia(day);
+    final key = DateTime(day.year, day.month, day.day);
+
+    final hayEventos = events.isNotEmpty;
+    final tieneCoincidencia = _diasConCoincidencias.contains(key);
+
+    Color bgColor = Colors.transparent;
+
+    if (hayEventos) {
+      // Color suave si solo son tus eventos
+      bgColor = Colors.indigo.withOpacity(0.18);
+    }
+
+    if (tieneCoincidencia) {
+      // Aumentamos la intensidad para marcar la coincidencia del grupo
+      bgColor = Colors.orange.withOpacity(hayEventos ? 0.35 : 0.25);
+    }
+
+    Border? border;
+    if (isSelected) {
+      border = Border.all(color: Colors.deepPurple, width: 2);
+    } else if (isToday) {
+      border = Border.all(color: Colors.indigo, width: 1.5);
+    }
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 160),
+      margin: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(10),
+        border: border,
+      ),
+      child: Center(
+        child: Text(
+          '${day.day}',
+          style: TextStyle(
+            fontWeight: hayEventos ? FontWeight.w600 : FontWeight.normal,
+            color: Colors.black87,
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -272,7 +313,39 @@ class _PantallaCalendarioGeneralState
         Column(
           children: [
             _buildFiltrosGrupos(),
+            Padding(
+              padding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  ChoiceChip(
+                    label: const Text('Mes'),
+                    selected: _calendarFormat == CalendarFormat.month,
+                    onSelected: (_) {
+                      setState(() => _calendarFormat = CalendarFormat.month);
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('Semana'),
+                    selected: _calendarFormat == CalendarFormat.week,
+                    onSelected: (_) {
+                      setState(() => _calendarFormat = CalendarFormat.week);
+                    },
+                  ),
+                ],
+              ),
+            ),
             TableCalendar(
+              calendarFormat: _calendarFormat,
+              availableCalendarFormats: const {
+                CalendarFormat.month: 'Mes',
+                CalendarFormat.week: 'Semana',
+              },
+              onFormatChanged: (format) {
+                setState(() => _calendarFormat = format);
+              },
               focusedDay: _focusedDay,
               firstDay: DateTime.utc(2020, 1, 1),
               lastDay: DateTime.utc(2100, 12, 31),
@@ -284,40 +357,52 @@ class _PantallaCalendarioGeneralState
                   _focusedDay = focused;
                 });
               },
+              onPageChanged: (focused) {
+                _focusedDay = focused;
+                _cargarEventos();
+                _calcularCoincidenciasGrupoSeleccionado();
+              },
+              calendarStyle: const CalendarStyle(
+                outsideDaysVisible: false,
+              ),
               calendarBuilders: CalendarBuilders(
-                markerBuilder: (context, day, events) {
-                  final key = DateTime(day.year, day.month, day.day);
-                  final tieneCoincidencia =
-                  _diasConCoincidencias.contains(key);
-
-                  if (!tieneCoincidencia) return null;
-
-                  return Align(
-                    alignment: Alignment.bottomCenter,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Colors.redAccent,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  );
-                },
+                defaultBuilder: (context, day, focusedDay) =>
+                    _buildDayCell(context, day, focusedDay),
+                todayBuilder: (context, day, focusedDay) =>
+                    _buildDayCell(context, day, focusedDay, isToday: true),
+                selectedBuilder: (context, day, focusedDay) =>
+                    _buildDayCell(context, day, focusedDay, isSelected: true),
               ),
             ),
             const Divider(),
             Expanded(
               child: eventosDelDia.isEmpty
-                  ? const Center(child: Text('No tienes eventos este día.'))
+                  ? const Center(
+                child: Text('No tienes eventos este día.'),
+              )
                   : ListView.builder(
                 itemCount: eventosDelDia.length,
                 itemBuilder: (_, i) {
                   final ev = eventosDelDia[i];
+                  final creador =
+                      ev['creador']?.toString() ?? 'Desconocido';
+                  final fecha =
+                  DateTime.parse(ev['horario']).toLocal();
+                  final hora =
+                  TimeOfDay.fromDateTime(fecha).format(context);
+
+                  final descripcion = (ev['descripcion'] ?? '').toString();
 
                   return ListTile(
                     title: Text(ev['titulo'] ?? 'Sin título'),
-                    subtitle: Text(ev['descripcion'] ?? ''),
+                    subtitle: Text(
+                      [
+                        if (descripcion.isNotEmpty) descripcion,
+                        'Hora: $hora',
+                        'Creado por: $creador',
+                      ].join('\n'),
+                    ),
+                    isThreeLine: true,
                     onTap: () {
                       Navigator.push(
                         context,
@@ -325,8 +410,6 @@ class _PantallaCalendarioGeneralState
                           builder: (_) => PantallaDetalleEvento(
                             evento: ev,
                             onGuardado: () async {
-                              // cuando se guarda/elimina en el detalle,
-                              // recargamos los eventos del calendario general
                               await _cargarEventos();
                               await _calcularCoincidenciasGrupoSeleccionado();
                             },
@@ -340,8 +423,6 @@ class _PantallaCalendarioGeneralState
             ),
           ],
         ),
-
-        // FAB dentro del Stack, abajo a la derecha
         Positioned(
           bottom: 16,
           right: 16,

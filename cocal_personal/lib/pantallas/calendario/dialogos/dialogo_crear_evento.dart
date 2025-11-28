@@ -10,12 +10,21 @@ class DialogoCrearEvento {
     required BuildContext context,
     required int idCalendario,
     required List<String> temasDisponibles,
+    DateTime? fechaInicial,
+    TimeOfDay? horaInicial,
     VoidCallback? onEventoCreado,
   }) async {
     final tituloCtl = TextEditingController();
     final descCtl = TextEditingController();
-    DateTime? fechaSeleccionada = DateTime.now();
-    TimeOfDay? horaSeleccionada = const TimeOfDay(hour: 9, minute: 0);
+
+    // ✅ Valores iniciales (pueden venir del día seleccionado en el calendario)
+    DateTime? fechaSeleccionada = fechaInicial ?? DateTime.now();
+    TimeOfDay? horaSeleccionada =
+        horaInicial ?? const TimeOfDay(hour: 9, minute: 0);
+
+    // ✅ Evento multi-día
+    bool multiDia = false;
+    DateTime? fechaFinSeleccionada;
 
     String tema = temasDisponibles.first;
     String visibilidad = 'PUBLICO';
@@ -76,13 +85,16 @@ class DialogoCrearEvento {
                         onPressed: () async {
                           final f = await showDatePicker(
                             context: context,
-                            initialDate:
-                            fechaSeleccionada ?? DateTime.now(),
+                            initialDate: fechaSeleccionada ?? DateTime.now(),
                             firstDate: DateTime(2020),
                             lastDate: DateTime(2100),
                           );
                           if (f != null) {
                             setStateDialog(() => fechaSeleccionada = f);
+                            // Si el evento es multi-día y no hay fin, la igualamos
+                            if (multiDia && fechaFinSeleccionada == null) {
+                              setStateDialog(() => fechaFinSeleccionada = f);
+                            }
                           }
                         },
                       ),
@@ -92,8 +104,7 @@ class DialogoCrearEvento {
                       child: ElevatedButton.icon(
                         icon: const Icon(Icons.access_time),
                         label: Text(
-                          horaSeleccionada?.format(context) ??
-                              'Elegir hora',
+                          horaSeleccionada?.format(context) ?? 'Elegir hora',
                         ),
                         onPressed: () async {
                           final h = await showTimePicker(
@@ -109,6 +120,50 @@ class DialogoCrearEvento {
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+
+                // ✅ Switch para multi-día
+                SwitchListTile(
+                  title: const Text('Evento de varios días'),
+                  value: multiDia,
+                  onChanged: (v) {
+                    setStateDialog(() {
+                      multiDia = v;
+                      if (!multiDia) {
+                        fechaFinSeleccionada = null;
+                      } else {
+                        fechaFinSeleccionada ??= fechaSeleccionada;
+                      }
+                    });
+                  },
+                ),
+
+                // ✅ Selector de fecha fin
+                if (multiDia)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.date_range),
+                      label: Text(
+                        fechaFinSeleccionada == null
+                            ? 'Elegir fecha fin'
+                            : 'Hasta: ${fechaFinSeleccionada!.day}/${fechaFinSeleccionada!.month}/${fechaFinSeleccionada!.year}',
+                      ),
+                      onPressed: () async {
+                        if (fechaSeleccionada == null) return;
+                        final f = await showDatePicker(
+                          context: context,
+                          initialDate:
+                          fechaFinSeleccionada ?? fechaSeleccionada!,
+                          firstDate: fechaSeleccionada!,
+                          lastDate: DateTime(2100),
+                        );
+                        if (f != null) {
+                          setStateDialog(() => fechaFinSeleccionada = f);
+                        }
+                      },
+                    ),
+                  ),
               ],
             ),
           ),
@@ -126,68 +181,93 @@ class DialogoCrearEvento {
                   return;
                 }
 
-                // 1) Construir fecha/hora final
-                final fechaHora = DateTime(
-                  fechaSeleccionada!.year,
-                  fechaSeleccionada!.month,
-                  fechaSeleccionada!.day,
-                  horaSeleccionada!.hour,
-                  horaSeleccionada!.minute,
-                );
+                // Rango de fechas (inicio / fin)
+                final DateTime inicio = fechaSeleccionada!;
+                final DateTime fin = (multiDia &&
+                    fechaFinSeleccionada != null &&
+                    !fechaFinSeleccionada!.isBefore(inicio))
+                    ? fechaFinSeleccionada!
+                    : inicio;
 
-                // 2) Crear evento en BD
-                final fila = await ServicioEvento.crearEvento(
-                  titulo: tituloCtl.text.trim(),
-                  descripcion: descCtl.text.trim(),
-                  horario: fechaHora,
-                  tema: tema,
-                  estado: estado,
-                  visibilidad: visibilidad,
-                  idCalendario: idCalendario,
-                  creador: 'Usuario Actual',
-                );
+                // Lista de filas creadas (para recordatorios)
+                final List<Map<String, dynamic>> filasCreadas = [];
 
-                final int idEvento = fila['id'] as int;
-                final String tituloEvento =
-                    fila['titulo']?.toString() ?? 'Evento';
-                final DateTime fechaEvento =
-                DateTime.parse(fila['horario'] as String).toLocal();
+                // Crear 1 evento por día dentro del rango
+                DateTime cursor = inicio;
+                while (!cursor.isAfter(fin)) {
+                  final fechaHora = DateTime(
+                    cursor.year,
+                    cursor.month,
+                    cursor.day,
+                    horaSeleccionada!.hour,
+                    horaSeleccionada!.minute,
+                  );
 
-                // 3) Preguntar si quiere recordatorio
-                final activar = await _preguntarActivarRecordatorio(context);
+                  final fila = await ServicioEvento.crearEvento(
+                    titulo: tituloCtl.text.trim(),
+                    descripcion: descCtl.text.trim().isEmpty
+                        ? null
+                        : descCtl.text.trim(),
+                    horario: fechaHora,
+                    tema: tema,
+                    estado: estado,
+                    visibilidad: visibilidad,
+                    idCalendario: idCalendario,
+                    creador: 'Usuario Actual',
+                  );
 
-                if (activar == true) {
-                  // 4) Mostrar diálogo para elegir minutos
-                  final minutos = await _pedirMinutosRecordatorio(context);
+                  filasCreadas.add(fila);
 
-                  if (minutos != null && minutos > 0) {
-                    // 5) Guardar recordatorio_minutos en BD
-                    await ServicioEvento.actualizarRecordatorio(
-                      idEvento: idEvento,
-                      minutos: minutos,
-                    );
+                  cursor = cursor.add(const Duration(days: 1));
+                }
 
-                    // 6) Calcular cuándo disparar notificación
-                    final fechaRecordatorio = fechaEvento.subtract(
-                      Duration(minutes: minutos),
-                    );
+                // Si se creó al menos un evento, preguntamos por recordatorio
+                if (filasCreadas.isNotEmpty) {
+                  final activar =
+                  await _preguntarActivarRecordatorio(context);
 
-                    final fechaProgramar =
-                    fechaRecordatorio.isBefore(DateTime.now())
-                        ? DateTime.now()
-                        .add(const Duration(seconds: 2))
-                        : fechaRecordatorio;
+                  if (activar == true) {
+                    final minutos =
+                    await _pedirMinutosRecordatorio(context);
 
-                    await NotificacionService.programarNotificacion(
-                      titulo: '⏰ Recordatorio de evento',
-                      cuerpo:
-                      'Tu evento "$tituloEvento" empieza en $minutos minutos.',
-                      fecha: fechaProgramar,
-                    );
+                    if (minutos != null && minutos > 0) {
+                      for (final fila in filasCreadas) {
+                        final int idEvento = fila['id'] as int;
+                        final String tituloEvento =
+                            fila['titulo']?.toString() ?? 'Evento';
+                        final DateTime fechaEvento =
+                        DateTime.parse(fila['horario'] as String)
+                            .toLocal();
+
+                        // Guardar recordatorio en BD
+                        await ServicioEvento.actualizarRecordatorio(
+                          idEvento: idEvento,
+                          minutos: minutos,
+                        );
+
+                        // Calcular cuándo disparar notificación
+                        final fechaRecordatorio = fechaEvento.subtract(
+                          Duration(minutes: minutos),
+                        );
+
+                        final fechaProgramar =
+                        fechaRecordatorio.isBefore(DateTime.now())
+                            ? DateTime.now()
+                            .add(const Duration(seconds: 2))
+                            : fechaRecordatorio;
+
+                        await NotificacionService.programarNotificacion(
+                          titulo: '⏰ Recordatorio de evento',
+                          cuerpo:
+                          'Tu evento "$tituloEvento" empieza en $minutos minutos.',
+                          fecha: fechaProgramar,
+                        );
+                      }
+                    }
                   }
                 }
 
-                // 7) Cerrar el diálogo principal y notificar al caller
+                // Cerrar el diálogo y notificar al caller
                 Navigator.pop(context, true);
                 onEventoCreado?.call();
               },
@@ -236,8 +316,7 @@ class DialogoCrearEvento {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                  'Seleccioná cuánto antes querés el aviso:'),
+              const Text('Seleccioná cuánto antes querés el aviso:'),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 10,
