@@ -70,6 +70,9 @@ class PostForo {
   /// Si el post pertenece al usuario actual (para alinearlo tipo chat)
   final bool esActual;
 
+  /// id del comentario padre si es una respuesta
+  final int? idComentarioPadre;
+
   PostForo({
     required this.id,
     required this.idTema,
@@ -81,14 +84,15 @@ class PostForo {
     required this.reacciones,
     required this.miReaccion,
     required this.esActual,
+    this.idComentarioPadre,
   });
 
   factory PostForo.fromMap(
-      Map<String, dynamic> map, {
-        Map<String, int>? reacciones,
-        String? miReaccion,
-        bool esActual = false,
-      }) {
+    Map<String, dynamic> map, {
+    Map<String, int>? reacciones,
+    String? miReaccion,
+    bool esActual = false,
+  }) {
     return PostForo(
       id: map['id'] as int,
       idTema: map['id_tema'] as int,
@@ -102,6 +106,7 @@ class PostForo {
       reacciones: reacciones ?? <String, int>{},
       miReaccion: miReaccion,
       esActual: esActual,
+      idComentarioPadre: map['id_comentario_padre'] as int?,
     );
   }
 }
