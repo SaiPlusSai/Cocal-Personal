@@ -6,6 +6,7 @@ import '../../../servicios/social/modelos_grupo.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'pantalla_preview_media_foro.dart';
+import 'widgets/foro_video_player.dart';
 
 
 class PantallaTemaForo extends StatefulWidget {
@@ -550,29 +551,8 @@ class _PantallaTemaForoState extends State<PantallaTemaForo> {
                   if (post.tipoContenido == 'VIDEO' && post.mediaUrl != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
-                      child: GestureDetector(
-                        onTap: () {
-                          // Más adelante puedes abrir una pantalla completa con video_player
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Reproductor de video pendiente'),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          height: 160,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            color: Colors.black26,
-                          ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.play_circle_fill,
-                              size: 48,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
+                      child: ForoVideoPlayer(
+                        url: post.mediaUrl!,
                       ),
                     ),
                   //FIN multimedia

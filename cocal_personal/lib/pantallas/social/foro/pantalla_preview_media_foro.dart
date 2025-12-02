@@ -57,8 +57,11 @@ class _PantallaPreviewMediaForoState extends State<PantallaPreviewMediaForo> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
     return Scaffold(
       backgroundColor: Colors.black,
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -67,53 +70,56 @@ class _PantallaPreviewMediaForoState extends State<PantallaPreviewMediaForo> {
           style: TextStyle(color: Colors.white),
         ),
       ),
-      body: Column(
-        children: [
-          // MEDIA
-          Expanded(
-            child: Center(
-              child: widget.esVideo
-                  ? (_videoCtl != null && _videoCtl!.value.isInitialized
-                  ? AspectRatio(
-                aspectRatio: _videoCtl!.value.aspectRatio,
-                child: GestureDetector(
-                  onTap: () {
-                    if (_videoCtl!.value.isPlaying) {
-                      _videoCtl!.pause();
-                    } else {
-                      _videoCtl!.play();
-                    }
-                    setState(() {});
-                  },
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      VideoPlayer(_videoCtl!),
-                      if (!_videoCtl!.value.isPlaying)
-                        const Icon(
-                          Icons.play_circle_fill,
-                          size: 64,
-                          color: Colors.white70,
-                        ),
-                    ],
+      body: SafeArea(
+        child: Column(
+          children: [
+            // MEDIA
+            Expanded(
+              child: Center(
+                child: widget.esVideo
+                    ? (_videoCtl != null && _videoCtl!.value.isInitialized
+                    ? AspectRatio(
+                  aspectRatio: _videoCtl!.value.aspectRatio,
+                  child: GestureDetector(
+                    onTap: () {
+                      if (_videoCtl!.value.isPlaying) {
+                        _videoCtl!.pause();
+                      } else {
+                        _videoCtl!.play();
+                      }
+                      setState(() {});
+                    },
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        VideoPlayer(_videoCtl!),
+                        if (!_videoCtl!.value.isPlaying)
+                          const Icon(
+                            Icons.play_circle_fill,
+                            size: 64,
+                            color: Colors.white70,
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-              )
-                  : const CircularProgressIndicator(color: Colors.white))
-                  : InteractiveViewer(
-                child: Image.file(
-                  widget.file,
-                  fit: BoxFit.contain,
+                )
+                    : const CircularProgressIndicator(color: Colors.white))
+                    : InteractiveViewer(
+                  child: Image.file(
+                    widget.file,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
             ),
-          ),
-          // CAPTION + ENVIAR
-          SafeArea(
-            top: false,
-            child: Container(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
+            // CAPTION + ENVIAR
+            Container(
+              padding: EdgeInsets.only(
+                left: 8,
+                right: 8,
+                top: 6,
+                bottom: bottomInset + 6,
+              ),
               color: Colors.black87,
               child: Row(
                 children: [
@@ -124,6 +130,8 @@ class _PantallaPreviewMediaForoState extends State<PantallaPreviewMediaForo> {
                       maxLines: 3,
                       minLines: 1,
                       decoration: const InputDecoration(
+                        filled: true,
+                        fillColor: Color(0xFF1E1E1E),
                         hintText: 'Añadir un comentario...',
                         hintStyle: TextStyle(color: Colors.white70),
                         border: OutlineInputBorder(
@@ -146,16 +154,19 @@ class _PantallaPreviewMediaForoState extends State<PantallaPreviewMediaForo> {
                     ),
                   )
                       : IconButton(
-                    icon: const Icon(Icons.send,
-                        color: Colors.greenAccent),
+                    icon: const Icon(
+                      Icons.send,
+                      color: Colors.greenAccent,
+                    ),
                     onPressed: _handleSend,
                   ),
                 ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
+
 }
