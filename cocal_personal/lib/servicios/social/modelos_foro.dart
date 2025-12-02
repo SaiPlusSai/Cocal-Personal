@@ -61,17 +61,13 @@ class PostForo {
   final DateTime? editadoEn;
   final String estado;
 
-  /// Reacciones agregadas (tipo -> cantidad)
-  final Map<String, int> reacciones;
+  final Map<String, int> reacciones;/// Reacciones agregadas (tipo -> cantidad)
+  final String? miReaccion;/// Reacción del usuario actual (o null)
+  final bool esActual; /// Si el post pertenece al usuario actual (para alinearlo tipo chat)
+  final int? idComentarioPadre;/// id del comentario padre si es una respuesta
 
-  /// Reacción del usuario actual (o null)
-  final String? miReaccion;
-
-  /// Si el post pertenece al usuario actual (para alinearlo tipo chat)
-  final bool esActual;
-
-  /// id del comentario padre si es una respuesta
-  final int? idComentarioPadre;
+  final String tipoContenido; // TEXTO, IMAGEN, VIDEO
+  final String? mediaUrl;
 
   PostForo({
     required this.id,
@@ -81,10 +77,12 @@ class PostForo {
     required this.creadoEn,
     required this.editadoEn,
     required this.estado,
+    this.idComentarioPadre,
+    required this.tipoContenido,
+    this.mediaUrl,
     required this.reacciones,
     required this.miReaccion,
     required this.esActual,
-    this.idComentarioPadre,
   });
 
   factory PostForo.fromMap(
@@ -103,10 +101,12 @@ class PostForo {
           ? DateTime.parse(map['editado_en'].toString())
           : null,
       estado: map['estado'] as String? ?? 'PUBLICADO',
+      idComentarioPadre: map['id_comentario_padre'] as int?,
+      tipoContenido: map['tipo_contenido'] as String? ?? 'TEXTO',
+      mediaUrl: map['media_url'] as String?,
       reacciones: reacciones ?? <String, int>{},
       miReaccion: miReaccion,
       esActual: esActual,
-      idComentarioPadre: map['id_comentario_padre'] as int?,
     );
   }
 }

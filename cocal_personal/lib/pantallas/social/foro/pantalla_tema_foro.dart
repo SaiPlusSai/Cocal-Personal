@@ -3,22 +3,32 @@ import 'package:flutter/material.dart';
 import '../../../servicios/social/foros_service.dart';
 import '../../../servicios/social/modelos_foro.dart';
 import '../../../servicios/social/modelos_grupo.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'pantalla_preview_media_foro.dart';
+
 
 class PantallaTemaForo extends StatefulWidget {
   final GrupoResumen grupo;
   final TemaForoResumen tema;
 
-  const PantallaTemaForo({super.key, required this.grupo, required this.tema});
+  const PantallaTemaForo({
+    super.key,
+    required this.grupo,
+    required this.tema,
+  });
 
   @override
   State<PantallaTemaForo> createState() => _PantallaTemaForoState();
 }
 
 class _PantallaTemaForoState extends State<PantallaTemaForo> {
-  bool _cargando = true;
-  bool _enviando = false;
-  List<PostForo> _posts = [];
+  late final Stream<List<PostForo>> _streamPosts;
   final TextEditingController _mensajeCtl = TextEditingController();
+  final ScrollController _scrollCtl = ScrollController();
+  final ImagePicker _picker = ImagePicker();
+
+  bool _enviando = false;
 
   /// Reacciones disponibles
   static const Map<String, String> _reaccionesDisponibles = {
@@ -34,23 +44,24 @@ class _PantallaTemaForoState extends State<PantallaTemaForo> {
   @override
   void initState() {
     super.initState();
-    _cargar();
+    // Suscribimos el stream en tiempo real
+    _streamPosts = ForosService.escucharPostsDeTema(widget.tema.id);
   }
 
   @override
   void dispose() {
     _mensajeCtl.dispose();
+    _scrollCtl.dispose();
     super.dispose();
   }
 
-  Future<void> _cargar() async {
-    setState(() => _cargando = true);
-    final posts = await ForosService.obtenerPosts(widget.tema.id);
-    if (!mounted) return;
-    setState(() {
-      _posts = posts;
-      _cargando = false;
-    });
+  void _scrollAlFinal() {
+    if (!_scrollCtl.hasClients) return;
+    _scrollCtl.animateTo(
+      _scrollCtl.position.maxScrollExtent,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
+    );
   }
 
   Future<void> _enviarMensaje() async {
@@ -69,20 +80,26 @@ class _PantallaTemaForoState extends State<PantallaTemaForo> {
     setState(() => _enviando = false);
 
     if (err != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(err)));
       return;
     }
 
     _mensajeCtl.clear();
     _respuestaA = null;
-    await _cargar();
+
+    // Después de enviar, baja al final (cuando ya se pintó el nuevo mensaje)
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollAlFinal());
   }
 
   Future<void> _toggleReaccion(PostForo post, String tipo) async {
-    final err = await ForosService.toggleReaccion(idPost: post.id, tipo: tipo);
+    final err =
+    await ForosService.toggleReaccion(idPost: post.id, tipo: tipo);
     if (!mounted) return;
-    if (err != null) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
-    else await _cargar();
+    if (err != null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(err)));
+    }
   }
 
   Future<void> _mostrarSelectorReacciones(PostForo post) async {
@@ -93,11 +110,15 @@ class _PantallaTemaForoState extends State<PantallaTemaForo> {
       ),
       builder: (ctx) {
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Reaccionar', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              const Text(
+                'Reaccionar',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -111,11 +132,17 @@ class _PantallaTemaForoState extends State<PantallaTemaForo> {
                       onTap: () => Navigator.pop(ctx, tipo),
                       child: Column(
                         children: [
-                          Text(emoji, style: const TextStyle(fontSize: 28)),
+                          Text(
+                            emoji,
+                            style: const TextStyle(fontSize: 28),
+                          ),
                           if (esActual)
                             const Padding(
                               padding: EdgeInsets.only(top: 4),
-                              child: Text('Tu reacción', style: TextStyle(fontSize: 10)),
+                              child: Text(
+                                'Tu reacción',
+                                style: TextStyle(fontSize: 10),
+                              ),
                             ),
                         ],
                       ),
@@ -133,6 +160,113 @@ class _PantallaTemaForoState extends State<PantallaTemaForo> {
     if (tipoSeleccionado == null) return;
     await _toggleReaccion(post, tipoSeleccionado);
   }
+  Future<void> _abrirPreviewImagen(File file) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PantallaPreviewMediaForo(
+          file: file,
+          esVideo: false,
+          onSend: (caption) async {
+            final url = await ForosService.subirMediaForo(
+              idTema: widget.tema.id,
+              file: file,
+              carpeta: 'imagenes',
+            );
+
+            if (url == null) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('No se pudo subir la imagen'),
+                  ),
+                );
+              }
+              return;
+            }
+
+            final err = await ForosService.crearPost(
+              idTema: widget.tema.id,
+              contenido: caption,
+              tipoContenido: 'IMAGEN',
+              mediaUrl: url,
+            );
+
+            if (err != null && mounted) {
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(SnackBar(content: Text(err)));
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+
+  Future<void> _abrirPreviewVideo(File file) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PantallaPreviewMediaForo(
+          file: file,
+          esVideo: true,
+          onSend: (caption) async {
+            final url = await ForosService.subirMediaForo(
+              idTema: widget.tema.id,
+              file: file,
+              carpeta: 'videos',
+            );
+
+            if (url == null) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('No se pudo subir el video'),
+                  ),
+                );
+              }
+              return;
+            }
+
+            final err = await ForosService.crearPost(
+              idTema: widget.tema.id,
+              contenido: caption,
+              tipoContenido: 'VIDEO',
+              mediaUrl: url,
+            );
+
+            if (err != null && mounted) {
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(SnackBar(content: Text(err)));
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+
+  Future<void> _enviarImagenDesdeGaleria() async {
+    final XFile? picked =
+    await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (picked == null) return;
+    await _abrirPreviewImagen(File(picked.path));
+  }
+
+  Future<void> _tomarFotoYCargar() async {
+    final XFile? picked =
+    await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
+    if (picked == null) return;
+    await _abrirPreviewImagen(File(picked.path));
+  }
+
+  Future<void> _enviarVideoDesdeGaleria() async {
+    final XFile? picked =
+    await _picker.pickVideo(source: ImageSource.gallery);
+    if (picked == null) return;
+    await _abrirPreviewVideo(File(picked.path));
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -145,104 +279,151 @@ class _PantallaTemaForoState extends State<PantallaTemaForo> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(widget.tema.titulo),
-            Text(widget.grupo.nombre, style: const TextStyle(fontSize: 12)),
+            Text(
+              widget.grupo.nombre,
+              style: const TextStyle(fontSize: 12),
+            ),
           ],
         ),
       ),
       body: Column(
         children: [
+          // LISTA DE MENSAJES EN VIVO
           Expanded(
-            child: _cargando
-                ? const Center(child: CircularProgressIndicator())
-                : _posts.isEmpty
-                    ? const Center(child: Text('Aún no hay mensajes en este tema'))
-                    : RefreshIndicator(
-                        onRefresh: _cargar,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          itemCount: _posts.length,
-                          itemBuilder: (_, i) {
-                            final p = _posts[i];
-                            final soyYo = p.esActual;
-                            final alignment = soyYo ? MainAxisAlignment.end : MainAxisAlignment.start;
-                            final bubbleColor = soyYo
-                                ? scheme.primary.withOpacity(0.15)
-                                : scheme.surfaceVariant.withOpacity(0.6);
+            child: StreamBuilder<List<PostForo>>(
+              stream: _streamPosts,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting &&
+                    !snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-                            final esRespuesta = p.idComentarioPadre != null;
-                            final margenIzq = esRespuesta ? 24.0 : 0.0;
+                final posts = snapshot.data ?? [];
 
-                            return Row(
-                              mainAxisAlignment: alignment,
-                              children: [
-                                Flexible(
-                                  child: GestureDetector(
-                                    onLongPress: () => _mostrarSelectorReacciones(p),
-                                    onTap: () {
-                                      // Preparar para responder
-                                      setState(() => _respuestaA = p);
-                                      _mensajeCtl.text = '@${p.autor} ';
-                                    },
-                                    child: Container(
-                                      margin: EdgeInsets.symmetric(vertical: 4).copyWith(left: margenIzq),
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(color: bubbleColor, borderRadius: BorderRadius.circular(10)),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Text(p.autor, style: t.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold)),
-                                              Text(p.creadoEn.toLocal().toString().substring(0, 16),
-                                                  style: t.textTheme.labelSmall?.copyWith(color: Colors.grey[700])),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(p.contenido),
-                                          const SizedBox(height: 6),
-                                          _buildChipsReacciones(p, scheme),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-                      ),
+                if (posts.isEmpty) {
+                  return const Center(
+                    child: Text('Aún no hay mensajes en este tema'),
+                  );
+                }
+
+                // Cuando hay datos, baja automáticamente al final
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _scrollAlFinal();
+                });
+
+                return ListView.builder(
+                  controller: _scrollCtl,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 8,
+                  ),
+                  itemCount: posts.length,
+                  itemBuilder: (_, i) {
+                    final p = posts[i];
+                    return _buildMensajeBubble(
+                      context: context,
+                      post: p,
+                      scheme: scheme,
+                      theme: t,
+                    );
+                  },
+                );
+              },
+            ),
           ),
+
           // Caja de texto inferior
           SafeArea(
             top: false,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              padding:
+              const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               decoration: BoxDecoration(
                 color: scheme.surface,
-                border: Border(top: BorderSide(color: scheme.outline.withOpacity(0.3))),
+                border: Border(
+                  top: BorderSide(
+                    color: scheme.outline.withOpacity(0.3),
+                  ),
+                ),
               ),
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _mensajeCtl,
-                      maxLines: 3,
-                      minLines: 1,
-                      textInputAction: TextInputAction.newline,
-                      decoration: InputDecoration(
-                        hintText: _respuestaA != null ? 'Respondiendo a ${_respuestaA!.autor}' : 'Escribe un mensaje',
-                        border: const OutlineInputBorder(),
+                  if (_respuestaA != null)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: scheme.primary.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Respondiendo a ${_respuestaA!.autor}: '
+                                  '${_respuestaA!.contenido}',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: t.textTheme.bodySmall,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, size: 18),
+                            onPressed: () {
+                              setState(() => _respuestaA = null);
+                            },
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 6),
-                  _enviando
-                      ? const CircularProgressIndicator()
-                      : IconButton(
-                          icon: const Icon(Icons.send),
-                          onPressed: _enviarMensaje,
+                  Row(
+                    children: [
+                      // 📎 Botones de adjuntar
+                      IconButton(
+                        icon: const Icon(Icons.photo),
+                        tooltip: 'Imagen de galería',
+                        onPressed: _enviarImagenDesdeGaleria,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.camera_alt),
+                        tooltip: 'Tomar foto',
+                        onPressed: _tomarFotoYCargar,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.videocam),
+                        tooltip: 'Video desde galería',
+                        onPressed: _enviarVideoDesdeGaleria,
+                      ),
+
+                      Expanded(
+                        child: TextField(
+                          controller: _mensajeCtl,
+                          maxLines: 3,
+                          minLines: 1,
+                          textInputAction: TextInputAction.newline,
+                          decoration: const InputDecoration(
+                            hintText: 'Escribe un mensaje',
+                            border: OutlineInputBorder(),
+                          ),
                         ),
+                      ),
+                      const SizedBox(width: 6),
+                      _enviando
+                          ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                          : IconButton(
+                        icon: const Icon(Icons.send),
+                        onPressed: _enviarMensaje,
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -252,8 +433,164 @@ class _PantallaTemaForoState extends State<PantallaTemaForo> {
     );
   }
 
+  Widget _buildMensajeBubble({
+    required BuildContext context,
+    required PostForo post,
+    required ColorScheme scheme,
+    required ThemeData theme,
+  }) {
+    final soyYo = post.esActual;
+    final alignment =
+    soyYo ? MainAxisAlignment.end : MainAxisAlignment.start;
+
+    final bubbleColor = soyYo
+        ? scheme.primary
+        : scheme.surfaceVariant.withOpacity(0.9);
+
+    final textColor = soyYo ? Colors.white : Colors.black87;
+
+    final esRespuesta = post.idComentarioPadre != null;
+    final margenHorizontal = esRespuesta ? 52.0 : 40.0;
+
+    return Row(
+      mainAxisAlignment: alignment,
+      children: [
+        Flexible(
+          child: GestureDetector(
+            onLongPress: () => _mostrarSelectorReacciones(post),
+            onTap: () {
+              // Preparar para responder
+              setState(() => _respuestaA = post);
+              _mensajeCtl.text = '@${post.autor} ';
+              _mensajeCtl.selection = TextSelection.fromPosition(
+                TextPosition(offset: _mensajeCtl.text.length),
+              );
+            },
+            child: Container(
+              margin: EdgeInsets.symmetric(vertical: 4).copyWith(
+                left: soyYo ? margenHorizontal : 8,
+                right: soyYo ? 8 : margenHorizontal,
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
+              ),
+              decoration: BoxDecoration(
+                color: bubbleColor,
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(14),
+                  topRight: const Radius.circular(14),
+                  bottomLeft: soyYo
+                      ? const Radius.circular(14)
+                      : const Radius.circular(4),
+                  bottomRight: soyYo
+                      ? const Radius.circular(4)
+                      : const Radius.circular(14),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Nombre + hora
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        post.autor,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: textColor.withOpacity(0.9),
+                        ),
+                      ),
+                      Text(
+                        post.creadoEn
+                            .toLocal()
+                            .toString()
+                            .substring(0, 16),
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: textColor.withOpacity(0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    post.contenido,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  //contenido multimedia
+                  if (post.tipoContenido == 'IMAGEN' && post.mediaUrl != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          post.mediaUrl!,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (ctx, child, progress) {
+                            if (progress == null) return child;
+                            return SizedBox(
+                              height: 160,
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  value: progress.expectedTotalBytes != null
+                                      ? progress.cumulativeBytesLoaded /
+                                      (progress.expectedTotalBytes ?? 1)
+                                      : null,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  if (post.tipoContenido == 'VIDEO' && post.mediaUrl != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: GestureDetector(
+                        onTap: () {
+                          // Más adelante puedes abrir una pantalla completa con video_player
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Reproductor de video pendiente'),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          height: 160,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            color: Colors.black26,
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.play_circle_fill,
+                              size: 48,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  //FIN multimedia
+                  const SizedBox(height: 2),
+                  _buildChipsReacciones(post, scheme),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildChipsReacciones(PostForo post, ColorScheme scheme) {
-    if (post.reacciones.isEmpty) return const SizedBox.shrink();
+    if (post.reacciones.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     return Wrap(
       spacing: 6,
@@ -266,6 +603,7 @@ class _PantallaTemaForoState extends State<PantallaTemaForo> {
           label: Text('$emoji $count'),
           backgroundColor: scheme.primary.withOpacity(0.2),
           visualDensity: VisualDensity.compact,
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
         );
       }).toList(),
     );

@@ -1,4 +1,4 @@
-//lib/pantallas/social/foro/pantalla_foro_grupo.dart
+// lib/pantallas/social/foro/pantalla_foro_grupo.dart
 import 'package:flutter/material.dart';
 import '../../../servicios/social/foros_service.dart';
 import 'pantalla_tema_foro.dart';
@@ -20,28 +20,30 @@ class PantallaForoGrupo extends StatefulWidget {
 class _PantallaForoGrupoState extends State<PantallaForoGrupo> {
   bool _cargando = true;
   ForoResumen? _foro;
-  List<TemaForoResumen> _temas = [];
+
+  Stream<List<TemaForoResumen>>? _streamTemas; // 👈 ahora usamos stream
 
   @override
   void initState() {
     super.initState();
-    _cargar();
+    _initForoYStream();
   }
 
-  Future<void> _cargar() async {
+  Future<void> _initForoYStream() async {
     setState(() => _cargando = true);
 
     try {
       // 1) obtener (o crear) el foro del grupo
-      final foro = await ForosService.obtenerOCrearForoDeGrupo(widget.grupo.id);
+      final foro =
+      await ForosService.obtenerOCrearForoDeGrupo(widget.grupo.id);
 
-      // 2) obtener sus temas
-      final temas = await ForosService.obtenerTemas(foro.id);
+      // 2) preparar stream realtime de temas
+      final streamTemas = ForosService.escucharTemasDeForo(foro.id);
 
       if (!mounted) return;
       setState(() {
         _foro = foro;
-        _temas = temas;
+        _streamTemas = streamTemas;
         _cargando = false;
       });
     } catch (e) {
@@ -113,7 +115,8 @@ class _PantallaForoGrupoState extends State<PantallaForoGrupo> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Tema creado')),
       );
-      _cargar();
+      // ❌ Antes: _cargar();
+      // ✅ Ahora: NO hace falta, el stream se actualiza solo
     }
   }
 
@@ -132,49 +135,80 @@ class _PantallaForoGrupoState extends State<PantallaForoGrupo> {
       body: _cargando
           ? const Center(child: CircularProgressIndicator())
           : _foro == null
-          ? const Center(child: Text('No se encontró el foro del grupo'))
-          : _temas.isEmpty
           ? const Center(
-        child: Text('Aún no hay temas. ¡Creá el primero!'),
+        child: Text('No se encontró el foro del grupo'),
       )
+          : _streamTemas == null
+          ? const Center(child: Text('Cargando temas...'))
           : RefreshIndicator(
-        onRefresh: _cargar,
-        child: ListView.builder(
-          itemCount: _temas.length,
-          itemBuilder: (_, i) {
-            final t = _temas[i];
-            return Card(
-              margin: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 6,
-              ),
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor:
-                  scheme.primary.withOpacity(0.15),
-                  child: Icon(
-                    Icons.forum,
-                    color: scheme.primary,
+        onRefresh:
+        _initForoYStream, // por si quieres “rearmar” el stream y el foro
+        child: StreamBuilder<List<TemaForoResumen>>(
+          stream: _streamTemas,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState ==
+                ConnectionState.waiting &&
+                !snapshot.hasData) {
+              return const Center(
+                child: CircularProgressIndicator(),
+              );
+            }
+
+            final temas = snapshot.data ?? [];
+
+            if (temas.isEmpty) {
+              return ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: const [
+                  SizedBox(height: 80),
+                  Center(
+                    child: Text(
+                      'Aún no hay temas. ¡Creá el primero!',
+                    ),
                   ),
-                ),
-                title: Text(t.titulo),
-                subtitle: Text(
-                  'Por ${t.autor} · ${t.creadoEn.toLocal()}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => PantallaTemaForo(
-                        grupo: widget.grupo,
-                        tema: t,
+                ],
+              );
+            }
+
+
+            return ListView.builder(
+              itemCount: temas.length,
+              itemBuilder: (_, i) {
+                final t = temas[i];
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: scheme.primary
+                          .withOpacity(0.15),
+                      child: Icon(
+                        Icons.forum,
+                        color: scheme.primary,
                       ),
                     ),
-                  );
-                },
-              ),
+                    title: Text(t.titulo),
+                    subtitle: Text(
+                      'Por ${t.autor} · ${t.creadoEn.toLocal()}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PantallaTemaForo(
+                            grupo: widget.grupo,
+                            tema: t,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
             );
           },
         ),

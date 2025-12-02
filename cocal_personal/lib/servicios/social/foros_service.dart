@@ -1,7 +1,12 @@
 // lib/servicios/social/foros_service.dart
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../supabase_service.dart';
 import 'modelos_foro.dart';
+import 'dart:io';
+import 'package:path/path.dart' as p;
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:mime/mime.dart';
 
 class ForosService {
   static final _db = SupabaseService.cliente;
@@ -30,6 +35,7 @@ class ForosService {
   // =========================
   //  FOROS Y TEMAS
   // =========================
+
   static Future<ForoResumen> obtenerOCrearForoDeGrupo(int idGrupo) async {
     try {
       final existing = await _db
@@ -72,7 +78,10 @@ class ForosService {
     }
   }
 
-  static Future<String?> crearTema({required int idForo, required String titulo}) async {
+  static Future<String?> crearTema({
+    required int idForo,
+    required String titulo,
+  }) async {
     try {
       final me = await _getUsuarioActualRow();
       final autor = '${me['nombre']} ${me['apellido'] ?? ''}'.trim();
@@ -90,13 +99,16 @@ class ForosService {
   }
 
   // =========================
-  //  POSTS + REACCIONES
+  //  POSTS: SNAPSHOT (versión antigua)
   // =========================
-  static Future<List<PostForo>> obtenerPosts(int idTema) async {
+
+  /// Versión que pega una vez a BD (útil para pantallas no realtime)
+  static Future<List<PostForo>> obtenerPostsSnapshot(int idTema) async {
     try {
       final posts = await _db
           .from('post_del_foro')
-          .select('id, id_tema, autor, contenido, creado_en, editado_en, estado, id_comentario_padre')
+          .select(
+          'id, id_tema, autor, contenido, creado_en, editado_en, estado, id_comentario_padre, tipo_contenido, media_url')
           .eq('id_tema', idTema)
           .order('creado_en', ascending: true);
 
@@ -111,7 +123,8 @@ class ForosService {
 
       final me = await _getUsuarioActualRow();
       final miCorreo = me['correo'] as String;
-      final miNombreCompleto = '${me['nombre']} ${me['apellido'] ?? ''}'.trim();
+      final miNombreCompleto =
+      '${me['nombre']} ${me['apellido'] ?? ''}'.trim();
 
       final Map<int, Map<String, int>> conteos = {};
       final Map<int, String?> miReaccion = {};
@@ -140,27 +153,90 @@ class ForosService {
         );
       }).toList();
     } catch (e) {
-      debugPrint('[ForosService] Error obtenerPosts: $e');
+      debugPrint('[ForosService] Error obtenerPostsSnapshot: $e');
       return [];
     }
   }
+
+  /// Alias para no romper código viejo que use obtenerPosts(...)
+  static Future<List<PostForo>> obtenerPosts(int idTema) =>
+      obtenerPostsSnapshot(idTema);
+
+  // =========================
+  //  POSTS: STREAM REALTIME (chat en vivo)
+  // =========================
+
+  static Stream<List<PostForo>> escucharPostsDeTema(int idTema) async* {
+    debugPrint('[ForosService] escucharPostsDeTema -> suscribiendo a idTema=$idTema');
+
+    final me = await _getUsuarioActualRow();
+    final miNombreCompleto =
+    '${me['nombre']} ${me['apellido'] ?? ''}'.trim();
+
+    yield* _db
+        .from('post_del_foro')
+        .stream(primaryKey: ['id'])
+        .eq('id_tema', idTema)
+        .map((rows) {
+      debugPrint(
+          '[ForosService] STREAM post_del_foro cambio para tema=$idTema, filas=${rows.length}');
+      for (final r in rows) {
+        debugPrint(
+            '  row id=${r['id']} id_tema=${r['id_tema']} autor=${r['autor']} contenido=${r['contenido']} creado_en=${r['creado_en']}');
+      }
+
+      rows.sort((a, b) {
+        final da = DateTime.parse(a['creado_en'].toString());
+        final db = DateTime.parse(b['creado_en'].toString());
+        return da.compareTo(db);
+      });
+
+      return rows.map<PostForo>((p) {
+        final autorPost = p['autor'] as String? ?? '';
+        final esActual = autorPost == miNombreCompleto;
+
+        return PostForo.fromMap(
+          p,
+          reacciones: const {},
+          miReaccion: null,
+          esActual: esActual,
+        );
+      }).toList();
+    });
+  }
+
+  // =========================
+  //  CREAR POST + REACCIONES
+  // =========================
 
   static Future<String?> crearPost({
     required int idTema,
     required String contenido,
     int? idComentarioPadre,
+    String tipoContenido = 'TEXTO',
+    String? mediaUrl,
   }) async {
     try {
       final me = await _getUsuarioActualRow();
       final autor = '${me['nombre']} ${me['apellido'] ?? ''}'.trim();
 
-      await _db.from('post_del_foro').insert({
+      debugPrint(
+          '[ForosService] crearPost -> idTema=$idTema, autor=$autor, contenido="$contenido", padre=$idComentarioPadre');
+
+      final inserted = await _db.from('post_del_foro').insert({
         'id_tema': idTema,
         'autor': autor,
         'contenido': contenido,
         'estado': 'PUBLICADO',
         'id_comentario_padre': idComentarioPadre,
-      });
+        'tipo_contenido': tipoContenido,
+        'media_url': mediaUrl,
+      }).select('id, creado_en, id_tema').single();
+
+      debugPrint(
+          '[ForosService] crearPost -> INSERT OK id=${inserted['id']} id_tema=${inserted['id_tema']} creado_en=${inserted['creado_en']}');
+
+      // El stream se actualiza solo
       return null;
     } catch (e) {
       debugPrint('[ForosService] Error crearPost: $e');
@@ -187,10 +263,14 @@ class ForosService {
         if (existente['tipo'] == tipo) {
           await _db.from('reaccion').delete().eq('id', existente['id']);
         } else {
-          await _db.from('reaccion').update({'tipo': tipo}).eq('id', existente['id']);
+          await _db
+              .from('reaccion')
+              .update({'tipo': tipo}).eq('id', existente['id']);
         }
       } else {
-        await _db.from('reaccion').insert({'id_post': idPost, 'tipo': tipo, 'autor': correo});
+        await _db
+            .from('reaccion')
+            .insert({'id_post': idPost, 'tipo': tipo, 'autor': correo});
       }
       return null;
     } catch (e) {
@@ -198,4 +278,103 @@ class ForosService {
       return 'No se pudo registrar la reacción';
     }
   }
+
+  // =========================
+  //  TEMAS: STREAM REALTIME
+  // =========================
+
+  static Stream<List<TemaForoResumen>> escucharTemasDeForo(int idForo) {
+    return _db
+        .from('temas_foro')
+        .stream(primaryKey: ['id'])
+        .eq('id_foro', idForo)
+        .map((rows) {
+      rows.sort((a, b) {
+        final da = DateTime.parse(a['creado_en'].toString());
+        final db = DateTime.parse(b['creado_en'].toString());
+        return db.compareTo(da); // más nuevos primero
+      });
+
+      return rows
+          .map<TemaForoResumen>(
+            (r) => TemaForoResumen.fromMap(r as Map<String, dynamic>),
+      )
+          .toList();
+    });
+  }
+  // =========================
+  //  STORAGE: subir media al bucket
+  // =========================
+  static Future<String?> subirMediaForo({
+    required int idTema,
+    required File file,
+    required String carpeta, // 'imagenes' | 'videos'
+  }) async {
+    try {
+      // Leemos bytes
+      final Uint8List bytes = await file.readAsBytes();
+
+      // Detectar extensión
+      final nombreOriginal = file.path.split('/').last;
+      String extension;
+
+      if (nombreOriginal.contains('.')) {
+        extension = nombreOriginal.split('.').last.toLowerCase();
+      } else {
+        // fallback razonable
+        extension = 'jpg';
+      }
+
+      // Content-Type según extensión
+      String contentType;
+      if (extension == 'mp4') {
+        contentType = 'video/mp4';
+      } else if (extension == 'png') {
+        contentType = 'image/png';
+      } else if (extension == 'jpg' || extension == 'jpeg') {
+        contentType = 'image/jpeg';
+      } else {
+        // Intentar detectar por mime
+        final mime = lookupMimeType(file.path) ?? 'application/octet-stream';
+        contentType = mime;
+      }
+
+      // Nombre único
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'tema_${idTema}_$timestamp.$extension';
+
+      // Path dentro del bucket:
+      //   imagenes/tema_2/tema_2_123456789.jpg
+      //   videos/tema_2/tema_2_123456789.mp4
+      final path = '$carpeta/tema_$idTema/$fileName';
+
+      final res = await SupabaseService.cliente.storage
+          .from('foro_media')
+          .uploadBinary(
+        path,
+        bytes,
+        fileOptions: FileOptions(contentType: contentType),
+      );
+
+      // Si algo viene raro
+      if (res.isEmpty) {
+        debugPrint('[ForosService] subirMediaForo: upload result vacío');
+      }
+
+      final url = SupabaseService.cliente.storage
+          .from('foro_media')
+          .getPublicUrl(path);
+
+      debugPrint('[ForosService] subirMediaForo OK, url=$url');
+      return url;
+    } on StorageException catch (e) {
+      debugPrint('[ForosService] Error subirMediaForo (storage): $e');
+      return null;
+    } catch (e) {
+      debugPrint('[ForosService] Error subirMediaForo: $e');
+      return null;
+    }
+  }
+
+
 }
