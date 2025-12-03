@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../servicios/supabase_service.dart';
 import '../../servicios/social/amigos_service.dart';
 import '../../servicios/social/modelos_amigos.dart';
+import '../../servicios/temas_interes_service.dart';
 
 class PantallaPerfil extends StatefulWidget {
   const PantallaPerfil({super.key});
@@ -19,6 +20,8 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
   String? fotoUrl;
   List<UsuarioResumen> _amigos = [];
   bool _cargandoAmigos = true;
+  List<TemaInteres> _temas = [];
+  bool _cargandoTemas = true;
 
 
   @override
@@ -26,6 +29,32 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
     super.initState();
     _cargarPerfil();
     _cargarAmigos();
+    _cargarTemas();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Recargar datos cada vez que la pantalla vuelve a estar visible
+    _cargarTemas();
+  }
+
+  Future<void> _cargarTemas() async {
+    setState(() {
+      _cargandoTemas = true;
+    });
+    try {
+      final temas = await TemasInteresService.obtenerTemasActual();
+      setState(() {
+        _temas = temas;
+      });
+    } catch (e) {
+      debugPrint('[PERFIL] Error cargando temas: $e');
+    } finally {
+      setState(() {
+        _cargandoTemas = false;
+      });
+    }
   }
 
   Future<void> _cargarAmigos() async {
@@ -99,6 +128,30 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
             Text(correo),
             const SizedBox(height: 20),
 
+            // Temas de interés
+            const Text('Mis temas de interés', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            _cargandoTemas
+                ? const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: CircularProgressIndicator(),
+                  )
+                : _temas.isEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Text('No has añadido temas de interés'),
+                      )
+                    : Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _temas.map((tema) {
+                          return Chip(
+                            label: Text(tema.nombre),
+                          );
+                        }).toList(),
+                      ),
+            const SizedBox(height: 20),
+
             // Amigos section
             const Text('Mis amigos', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
@@ -142,9 +195,12 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
             ElevatedButton.icon(
               icon: const Icon(Icons.edit),
               label: const Text('Editar perfil'),
-              onPressed: () {
-                Navigator.pushNamed(context, '/editar-perfil');
+              onPressed: () async {
+                await Navigator.pushNamed(context, '/editar-perfil');
+                // Recargar después de volver de editar
                 _cargarPerfil();
+                _cargarTemas();
+                _cargarAmigos();
               },
             )
           ],
