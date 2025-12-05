@@ -224,4 +224,52 @@ class AmigosService {
       return 0;
     }
   }
+
+  /// Obtener amigos de cualquier usuario (por ID)
+  static Future<List<UsuarioResumen>> obtenerAmigosDeUsuario(int usuarioId) async {
+    try {
+      // Buscar solicitudes aceptadas donde el usuario es destinatario o remitente
+      final rows = await _db
+          .from('solicitudes')
+          .select('id_usuario, id_remitente, aceptada')
+          .eq('aceptada', true)
+          .or('id_usuario.eq.$usuarioId,id_remitente.eq.$usuarioId');
+
+      final lista = rows as List;
+
+      // Sacar los IDs de los otros usuarios (los amigos)
+      final Set<int> idsAmigos = {};
+
+      for (final raw in lista) {
+        final map = raw as Map<String, dynamic>;
+        final idUsuario = map['id_usuario'] as int?;
+        final idRemitente = map['id_remitente'] as int?;
+
+        if (idUsuario == null || idRemitente == null) continue;
+
+        if (idUsuario == usuarioId) {
+          idsAmigos.add(idRemitente);
+        } else if (idRemitente == usuarioId) {
+          idsAmigos.add(idUsuario);
+        }
+      }
+
+      if (idsAmigos.isEmpty) {
+        return [];
+      }
+
+      // Traer datos de esos usuarios de la tabla "usuario"
+      final usuariosRows = await _db
+          .from('usuario')
+          .select('id, nombre, apellido, correo')
+          .inFilter('id', idsAmigos.toList());
+
+      return (usuariosRows as List)
+          .map((e) => UsuarioResumen.fromMap(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('[AMIGOS] Error obtenerAmigosDeUsuario: $e');
+      return [];
+    }
+  }
 }
