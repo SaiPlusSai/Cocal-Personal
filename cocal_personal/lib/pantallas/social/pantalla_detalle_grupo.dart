@@ -5,6 +5,8 @@ import 'pantalla_invitar_amigos_grupo.dart';
 import 'pantalla_miembros_grupo.dart';
 import 'foro/pantalla_foro_grupo.dart';
 import '../../servicios/social/modelos_grupo.dart';
+import '../calendario/pantalla_eventos_calendario.dart';
+import '../../servicios/calendario/servicio_calendario.dart';
 
 class PantallaDetalleGrupo extends StatefulWidget {
   final GrupoResumen grupo;
@@ -160,6 +162,48 @@ class _PantallaDetalleGrupoState extends State<PantallaDetalleGrupo> {
               ),
             ),
             const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final g = widget.grupo;
+
+                  final calGrupo =
+                  await ServicioCalendario.obtenerOCrearCalendarioDeGrupo(
+                    g.id,
+                    nombre: 'Calendario – ${g.nombre}',
+                  );
+
+                  if (!mounted) return;
+
+                  if (calGrupo == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                            'No se pudo obtener el calendario del grupo'),
+                      ),
+                    );
+                    return;
+                  }
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PantallaEventosCalendario(
+                        idCalendario: calGrupo.id,
+                        nombreCalendario: calGrupo.nombre,
+                        idGrupo: g.id, // 👈 importante para coincidencias
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.calendar_month),
+                label: const Text('Ver calendario del grupo'),
+              ),
+            ),
+            const SizedBox(height: 8),
+
             Expanded(
               child: _cargandoMiembros
                   ? const Center(child: CircularProgressIndicator())

@@ -2,7 +2,12 @@
 import 'package:flutter/material.dart';
 import '../../servicios/supabase_service.dart';
 import '../../servicios/social/amigos_service.dart';
+import '../../servicios/social/modelos_amigos.dart';
 import '../../servicios/servicio_calendario.dart';
+import '../../servicios/temas_interes_service.dart';
+import '../../servicios/social/publicaciones_service.dart';
+import '../../servicios/social/modelos_publicacion.dart';
+import '../social/widgets/publicacion_card.dart';
 
 class PantallaPerfilUsuario extends StatefulWidget {
   final int userId;
@@ -20,6 +25,11 @@ class _PantallaPerfilUsuarioState extends State<PantallaPerfilUsuario> {
   String? fotoUrl;
   int cantidadAmigos = 0;
   List<Map<String, dynamic>> calendarios = [];
+  bool sonAmigos = false;
+  List<TemaInteres> temas = [];
+
+  List<PublicacionModel> _publicaciones = [];
+  bool _cargandoPublicaciones = true;
 
   bool cargando = true;
   String? error;
@@ -54,6 +64,15 @@ class _PantallaPerfilUsuarioState extends State<PantallaPerfilUsuario> {
       // Contar amigos usando el nuevo método
       final cant = await AmigosService.contarAmigos(widget.userId);
 
+      // Verificar si ya son amigos
+      final amigos = await AmigosService.sonAmigos(widget.userId);
+
+      // Cargar temas de interés del usuario
+      final temasUsuario = await TemasInteresService.obtenerTemasDeUsuario(widget.userId);
+
+      final pubs = await PublicacionesService
+          .obtenerPublicacionesDePerfil(widget.userId);
+
       setState(() {
         nombre = usuarioRes['nombre'] ?? '';
         apellido = usuarioRes['apellido'] ?? '';
@@ -61,7 +80,11 @@ class _PantallaPerfilUsuarioState extends State<PantallaPerfilUsuario> {
         fotoUrl = usuarioRes['foto_url'];
         calendarios = cals;
         cantidadAmigos = cant;
+        sonAmigos = amigos;
+        temas = temasUsuario;
         cargando = false;
+        _publicaciones = pubs;
+        _cargandoPublicaciones = false;
       });
     } catch (e) {
       setState(() {
@@ -80,6 +103,13 @@ class _PantallaPerfilUsuarioState extends State<PantallaPerfilUsuario> {
       SnackBar(
         content: Text(resultado ?? 'Solicitud de amistad enviada'),
       ),
+    );
+  }
+
+  Future<void> _mostrarListaAmigos() async {
+    showDialog(
+      context: context,
+      builder: (context) => _DialogoListaAmigos(userId: widget.userId),
     );
   }
 
@@ -130,18 +160,43 @@ class _PantallaPerfilUsuarioState extends State<PantallaPerfilUsuario> {
               Text(correo, style: Theme.of(context).textTheme.bodySmall),
               const SizedBox(height: 16),
 
+              // Temas de interés
+              if (temas.isNotEmpty) ...[
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Temas de interés',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: temas.map((tema) {
+                    return Chip(
+                      label: Text(tema.nombre),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+              ],
+
               // Stats
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Column(
-                    children: [
-                      Text(
-                        '$cantidadAmigos',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      const Text('Amigos'),
-                    ],
+                  GestureDetector(
+                    onTap: _mostrarListaAmigos,
+                    child: Column(
+                      children: [
+                        Text(
+                          '$cantidadAmigos',
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const Text('Amigos'),
+                      ],
+                    ),
                   ),
                   Column(
                     children: [
@@ -156,17 +211,44 @@ class _PantallaPerfilUsuarioState extends State<PantallaPerfilUsuario> {
               ),
               const SizedBox(height: 20),
 
-              // Botón enviar solicitud
+              // Botón enviar solicitud o mostrar estado de amigos
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.person_add),
-                  label: const Text('Enviar solicitud de amistad'),
-                  onPressed: _enviarSolicitud,
-                ),
+                child: sonAmigos
+                    ? ElevatedButton.icon(
+                      icon: const Icon(Icons.check_circle),
+                      label: const Text('Amigos'),
+                      onPressed: null, // Deshabilitado porque ya son amigos
+                    )
+                    : ElevatedButton.icon(
+                      icon: const Icon(Icons.person_add),
+                      label: const Text('Enviar solicitud de amistad'),
+                      onPressed: _enviarSolicitud,
+                    ),
               ),
               const SizedBox(height: 24),
-
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Publicaciones',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (_cargandoPublicaciones)
+                const Center(child: CircularProgressIndicator())
+              else if (_publicaciones.isEmpty)
+                const Text('Este usuario aún no tiene publicaciones visibles para vos.')
+              else
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _publicaciones.length,
+                  itemBuilder: (_, i) {
+                    final p = _publicaciones[i];
+                    return PublicacionCard(publicacion: p);
+                  },
+                ),
               // Calendarios públicos
               if (calendarios.isNotEmpty) ...[
                 const Align(
@@ -202,6 +284,71 @@ class _PantallaPerfilUsuarioState extends State<PantallaPerfilUsuario> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _DialogoListaAmigos extends StatefulWidget {
+  final int userId;
+
+  const _DialogoListaAmigos({required this.userId});
+
+  @override
+  State<_DialogoListaAmigos> createState() => _DialogoListaAmigosState();
+}
+
+class _DialogoListaAmigosState extends State<_DialogoListaAmigos> {
+  late Future<List<UsuarioResumen>> _futureAmigos;
+
+  @override
+  void initState() {
+    super.initState();
+    _futureAmigos = AmigosService.obtenerAmigosDeUsuario(widget.userId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Lista de amigos'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: FutureBuilder<List<UsuarioResumen>>(
+          future: _futureAmigos,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            }
+
+            final amigos = snapshot.data ?? [];
+
+            if (amigos.isEmpty) {
+              return const Center(child: Text('No tiene amigos'));
+            }
+
+            return ListView.builder(
+              itemCount: amigos.length,
+              itemBuilder: (context, index) {
+                final amigo = amigos[index];
+                return ListTile(
+                  leading: const CircleAvatar(child: Icon(Icons.person)),
+                  title: Text('${amigo.nombre} ${amigo.apellido}'),
+                  subtitle: Text(amigo.correo),
+                );
+              },
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cerrar'),
+        ),
+      ],
     );
   }
 }
