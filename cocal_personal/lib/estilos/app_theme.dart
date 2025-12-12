@@ -1,73 +1,103 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-/// Colores de la paleta de colroes que definimos nosotros jiji
 class AppColors {
-  // principal
-  static const Color primary = Color(0xFF1B753F);
-  // resaltos / call-to-action
-  static const Color accent = Color(0xFF36A05B);
-  // fondo claro
-  static const Color background = Color(0xFFF7F7F7);
-  // hover / estados sutiles
+  static const Color backgroundLight = Color(0xFFF7F7F7);
+  static const Color backgroundDark = Color(0xFF303030);
   static const Color hover = Color(0xFFABBCB0);
-
-  // textos
-  static const Color onPrimary = Colors.white;      // texto sobre botones/appbar
-  static const Color bodyText = Colors.black87;     // texto normal sobre fondo claro
 }
 
-///Tema de la app
 class AppTheme {
-  static ThemeData light() {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: AppColors.primary,
-      brightness: Brightness.light,
-    ).copyWith(
-      primary: AppColors.primary,
-      secondary: AppColors.accent,
-      surface: Colors.white,
-      background: AppColors.background,
-      onPrimary: AppColors.onPrimary,
-      onSurface: AppColors.bodyText,
-      onBackground: AppColors.bodyText,
-      outline: AppColors.hover,
+  static ThemeData create({
+    required Color accentColor,
+    required Color secondaryColor,
+    required Brightness brightness,
+    required String fontFamily,
+  }) {
+    final isDark = brightness == Brightness.dark;
+
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: accentColor,
+      brightness: brightness,
+      primary: accentColor,
+      secondary: secondaryColor,
+      surface: isDark ? Color(0xFF303030) : Colors.white,
     );
+
+    final backgroundColor = isDark
+        ? AppColors.backgroundDark
+        : AppColors.backgroundLight;
+
+    TextTheme baseTextTheme = const TextTheme(
+      titleLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+      bodyMedium: TextStyle(),
+    );
+
+    final fontTheme = GoogleFonts.getFont(
+      fontFamily,
+      textStyle: baseTextTheme.bodyMedium,
+    );
+
+    final TextTheme dynamicTextTheme =
+        GoogleFonts.getTextTheme(fontFamily, baseTextTheme)
+            .copyWith(
+              titleLarge: baseTextTheme.titleLarge?.copyWith(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : colorScheme.primary,
+              ),
+            )
+            .apply(
+              bodyColor: isDark ? Colors.white70 : Colors.black87,
+              displayColor: isDark ? Colors.white : colorScheme.primary,
+            );
 
     return ThemeData(
       useMaterial3: true,
-      colorScheme: scheme,
-      scaffoldBackgroundColor: AppColors.background,
-      appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.onPrimary,
+      brightness: brightness,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: backgroundColor,
+
+      textTheme: dynamicTextTheme,
+      fontFamily: GoogleFonts.getFont(fontFamily).fontFamily,
+
+      appBarTheme: AppBarTheme(
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
         elevation: 0,
         centerTitle: true,
-      ),
-
-      // Botones elevados (primarios)
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: AppColors.onPrimary,
-          disabledBackgroundColor: AppColors.hover,
-          minimumSize: const Size.fromHeight(48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        titleTextStyle: GoogleFonts.getFont(
+          fontFamily,
+          fontWeight: FontWeight.bold,
+          color: colorScheme.onPrimary,
         ),
       ),
 
-      // Botones de texto (secundarios / links)
+      // Botones
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
+          disabledBackgroundColor: AppColors.hover,
+          minimumSize: const Size.fromHeight(48),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.accent,
+          foregroundColor: colorScheme.primary,
           textStyle: const TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
 
-      // Campos de texto
+      // Inputs
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
-        labelStyle: const TextStyle(color: AppColors.primary),
+        fillColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        labelStyle: TextStyle(color: colorScheme.primary),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.hover),
@@ -78,30 +108,29 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.accent, width: 2),
+          borderSide: BorderSide(
+            color: colorScheme.primary,
+            width: 2,
+          ), // Dynamic
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
       ),
 
-      // Snackbars
-      snackBarTheme: const SnackBarThemeData(
-        backgroundColor: AppColors.primary,
-        contentTextStyle: TextStyle(color: AppColors.onPrimary),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: colorScheme.primary,
+        contentTextStyle: const TextStyle(color: Colors.white),
         behavior: SnackBarBehavior.floating,
       ),
 
-      // Loaders
-      progressIndicatorTheme:
-          const ProgressIndicatorThemeData(color: AppColors.accent),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: colorScheme.primary,
+      ),
 
-      // Tipografía base
-      textTheme: const TextTheme(
-        titleLarge: TextStyle(
-          fontSize: 22,
-          fontWeight: FontWeight.bold,
-          color: AppColors.primary,
-        ),
-        bodyMedium: TextStyle(color: AppColors.bodyText),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.all(colorScheme.primary),
       ),
     );
   }

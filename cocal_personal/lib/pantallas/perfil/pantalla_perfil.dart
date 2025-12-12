@@ -1,12 +1,9 @@
-// lib/pantallas/perfil/pantalla_perfil.dart
+//lib/pantallas/perfil/pantalla_perfil.dart
 import 'package:flutter/material.dart';
 import '../../servicios/supabase_service.dart';
 import '../../servicios/social/amigos_service.dart';
 import '../../servicios/social/modelos_amigos.dart';
 import '../../servicios/temas_interes_service.dart';
-import '../../servicios/social/publicaciones_service.dart';
-import '../../servicios/social/modelos_publicacion.dart';
-import '../social/widgets/publicacion_card.dart';
 
 class PantallaPerfil extends StatefulWidget {
   const PantallaPerfil({super.key});
@@ -21,16 +18,11 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
   String correo = '';
   bool cargando = true;
   String? fotoUrl;
-
   List<UsuarioResumen> _amigos = [];
   bool _cargandoAmigos = true;
-
   List<TemaInteres> _temas = [];
   bool _cargandoTemas = true;
 
-  int? _idUsuario;
-  List<PublicacionModel> _publicaciones = [];
-  bool _cargandoPublicaciones = true;
 
   @override
   void initState() {
@@ -45,28 +37,6 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
     super.didChangeDependencies();
     // Recargar datos cada vez que la pantalla vuelve a estar visible
     _cargarTemas();
-  }
-
-  Future<void> _cargarPublicaciones() async {
-    final id = _idUsuario;
-    if (id == null) return;
-
-    setState(() {
-      _cargandoPublicaciones = true;
-    });
-
-    try {
-      final pubs = await PublicacionesService.obtenerPublicacionesDePerfil(id);
-      setState(() {
-        _publicaciones = pubs;
-        _cargandoPublicaciones = false;
-      });
-    } catch (e) {
-      debugPrint('[PERFIL] Error cargando publicaciones: $e');
-      setState(() {
-        _cargandoPublicaciones = false;
-      });
-    }
   }
 
   Future<void> _cargarTemas() async {
@@ -109,12 +79,7 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
     final cliente = SupabaseService.cliente;
     final user = cliente.auth.currentUser;
 
-    if (user == null || user.email == null) {
-      setState(() {
-        cargando = false;
-      });
-      return;
-    }
+    if (user == null) return;
 
     final res = await cliente
         .from('usuario')
@@ -123,15 +88,13 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
         .single();
 
     setState(() {
-      _idUsuario = res['id'] as int;
       nombre = res['nombre'];
       apellido = res['apellido'] ?? '';
       correo = res['correo'];
-      fotoUrl = res['foto_url'];
       cargando = false;
-    });
+      fotoUrl = res['foto_url'];
 
-    await _cargarPublicaciones();
+    });
   }
 
   @override
@@ -142,188 +105,106 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
       );
     }
 
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Mi perfil'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Resumen'),
-              Tab(text: 'Publicaciones'),
-            ],
-          ),
-        ),
-        body: TabBarView(
+    return Scaffold(
+      appBar: AppBar(title: const Text('Mi perfil')),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildTabResumen(context),
-            _buildTabPublicaciones(context),
+            CircleAvatar(
+              radius: 50,
+              backgroundImage: fotoUrl != null
+                  ? NetworkImage('$fotoUrl?v=${DateTime.now().millisecondsSinceEpoch}')
+                  : null,
+              child: fotoUrl == null
+                  ? const Icon(Icons.person, size: 50)
+                  : null,
+            ),
+            const SizedBox(height: 20),
+            Text('$nombre $apellido',
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            Text(correo),
+            const SizedBox(height: 20),
+
+            // Temas de interés
+            const Text('Mis temas de interés', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            _cargandoTemas
+                ? const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: CircularProgressIndicator(),
+                  )
+                : _temas.isEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Text('No has añadido temas de interés'),
+                      )
+                    : Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _temas.map((tema) {
+                          return Chip(
+                            label: Text(tema.nombre),
+                          );
+                        }).toList(),
+                      ),
+            const SizedBox(height: 20),
+
+            // Amigos section
+            const Text('Mis amigos', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Container(
+              constraints: const BoxConstraints(maxHeight: 220),
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
+              ),
+              child: _cargandoAmigos
+                  ? const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  : _amigos.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: Center(child: Text('No tienes amigos aún')),
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.all(8),
+                          itemCount: _amigos.length,
+                          itemBuilder: (context, i) {
+                            final a = _amigos[i];
+                            return ListTile(
+                              leading: CircleAvatar(child: Text(a.nombre.isNotEmpty ? a.nombre[0] : '?')),
+                              title: Text(a.nombreCompleto),
+                              subtitle: Text(a.correo),
+                              onTap: () {
+                                // Opcional: navegar al perfil del amigo
+                                Navigator.pushNamed(context, '/perfil-usuario', arguments: {'userId': a.id});
+                              },
+                            );
+                          },
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                        ),
+            ),
+
+            const Spacer(),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.edit),
+              label: const Text('Editar perfil'),
+              onPressed: () async {
+                await Navigator.pushNamed(context, '/editar-perfil');
+                // Recargar después de volver de editar
+                _cargarPerfil();
+                _cargarTemas();
+                _cargarAmigos();
+              },
+            )
           ],
         ),
-      ),
-    );
-  }
-
-  // ===================== TAB 1: RESUMEN =====================
-
-  Widget _buildTabResumen(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          CircleAvatar(
-            radius: 50,
-            backgroundImage: fotoUrl != null
-                ? NetworkImage(
-              '$fotoUrl?v=${DateTime.now().millisecondsSinceEpoch}',
-            )
-                : null,
-            child: fotoUrl == null
-                ? const Icon(Icons.person, size: 50)
-                : null,
-          ),
-          const SizedBox(height: 20),
-          Text(
-            '$nombre $apellido',
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(correo),
-          const SizedBox(height: 20),
-
-          // Temas de interés
-          const Text(
-            'Mis temas de interés',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          _cargandoTemas
-              ? const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: CircularProgressIndicator(),
-          )
-              : _temas.isEmpty
-              ? const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Text('No has añadido temas de interés'),
-          )
-              : Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _temas.map((tema) {
-              return Chip(
-                label: Text(tema.nombre),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 20),
-
-          // Amigos section
-          const Text(
-            'Mis amigos',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            constraints: const BoxConstraints(maxHeight: 220),
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: const [
-                BoxShadow(color: Colors.black12, blurRadius: 4),
-              ],
-            ),
-            child: _cargandoAmigos
-                ? const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Center(child: CircularProgressIndicator()),
-            )
-                : _amigos.isEmpty
-                ? const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Center(child: Text('No tienes amigos aún')),
-            )
-                : ListView.separated(
-              padding: const EdgeInsets.all(8),
-              itemCount: _amigos.length,
-              itemBuilder: (context, i) {
-                final a = _amigos[i];
-                return ListTile(
-                  leading: CircleAvatar(
-                    child: Text(
-                      a.nombre.isNotEmpty ? a.nombre[0] : '?',
-                    ),
-                  ),
-                  title: Text(a.nombreCompleto),
-                  subtitle: Text(a.correo),
-                  onTap: () {
-                    // Opcional: navegar al perfil del amigo
-                    Navigator.pushNamed(
-                      context,
-                      '/perfil-usuario',
-                      arguments: {'userId': a.id},
-                    );
-                  },
-                );
-              },
-              separatorBuilder: (_, __) =>
-              const Divider(height: 1),
-            ),
-          ),
-
-          const Spacer(),
-          ElevatedButton.icon(
-            icon: const Icon(Icons.edit),
-            label: const Text('Editar perfil'),
-            onPressed: () async {
-              await Navigator.pushNamed(context, '/editar-perfil');
-              // Recargar después de volver de editar
-              _cargarPerfil();
-              _cargarTemas();
-              _cargarAmigos();
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ===================== TAB 2: PUBLICACIONES =====================
-
-  Widget _buildTabPublicaciones(BuildContext context) {
-    if (_cargandoPublicaciones) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_publicaciones.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Text(
-            'Todavía no publicaste nada.\n'
-                'Podés crear publicaciones desde el calendario o los eventos.',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: _cargarPublicaciones,
-      child: ListView.builder(
-        itemCount: _publicaciones.length,
-        itemBuilder: (_, i) {
-          final p = _publicaciones[i];
-          return PublicacionCard(
-            publicacion: p,
-            mostrarEvento: true,
-          );
-        },
       ),
     );
   }
