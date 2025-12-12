@@ -180,6 +180,7 @@ class _ConversacionEventoState extends State<ConversacionEvento> {
               return PublicacionCard(
                 publicacion: _publicaciones[i],
                 mostrarEvento: false,
+                onEliminada: _cargarPublicacionesEvento,
               );
             },
           ),

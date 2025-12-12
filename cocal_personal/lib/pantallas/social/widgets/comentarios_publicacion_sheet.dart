@@ -21,18 +21,65 @@ class _ComentariosPublicacionSheetState
   final _textoCtl = TextEditingController();
   bool _enviando = false;
   bool _cargando = true;
+  int? _miId;
   List<ComentarioPublicacionModel> _comentarios = [];
 
   @override
   void initState() {
     super.initState();
+    _cargarMiId();
     _cargarComentarios();
   }
-
+  Future<void> _cargarMiId() async {
+    final id = await PublicacionesService.obtenerIdUsuarioActual();
+    if (!mounted) return;
+    setState(() => _miId = id);
+  }
   @override
   void dispose() {
     _textoCtl.dispose();
     super.dispose();
+  }
+  Future<void> _onLongPressComentario(
+      ComentarioPublicacionModel c) async {
+    // solo si es mío
+    if (_miId == null || _miId != c.idUsuario) return;
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Eliminar comentario'),
+        content: const Text(
+            '¿Seguro que deseas eliminar este comentario?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    final err =
+    await PublicacionesService.eliminarComentario(c.id);
+
+    if (!mounted) return;
+
+    if (err != null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(err)));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Comentario eliminado')),
+      );
+      await _cargarComentarios();
+    }
   }
 
   Future<void> _cargarComentarios() async {
@@ -154,41 +201,44 @@ class _ComentariosPublicacionSheetState
                         .trim();
                     final fecha = _formatearFecha(c.creadoEn);
 
-                    return ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: CircleAvatar(
-                        backgroundImage: (c.fotoAutor != null &&
-                            c.fotoAutor!.isNotEmpty)
-                            ? NetworkImage(c.fotoAutor!)
-                            : null,
-                        child: (c.fotoAutor == null ||
-                            c.fotoAutor!.isEmpty)
-                            ? const Icon(Icons.person, size: 18)
-                            : null,
-                      ),
-                      title: Text(
-                        nombre.isEmpty ? 'Usuario' : nombre,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
+                    return GestureDetector(
+                      onLongPress: () => _onLongPressComentario(c),
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: CircleAvatar(
+                          backgroundImage: (c.fotoAutor != null &&
+                              c.fotoAutor!.isNotEmpty)
+                              ? NetworkImage(c.fotoAutor!)
+                              : null,
+                          child: (c.fotoAutor == null ||
+                              c.fotoAutor!.isEmpty)
+                              ? const Icon(Icons.person, size: 18)
+                              : null,
                         ),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            c.contenido,
-                            maxLines: 4,
-                            overflow: TextOverflow.ellipsis,
+                        title: Text(
+                          nombre,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            fecha,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey[600],
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              c.contenido,
+                              maxLines: 4,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 2),
+                            Text(
+                              fecha,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   },

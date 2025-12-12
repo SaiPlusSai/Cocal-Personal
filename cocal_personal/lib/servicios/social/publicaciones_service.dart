@@ -40,6 +40,17 @@ class PublicacionesService {
     }
     return row;
   }
+  /// Devuelve el id del usuario autenticado o null si falla
+  static Future<int?> obtenerIdUsuarioActual() async {
+    try {
+      final row = await _getUsuarioActualRow();
+      return row['id'] as int;
+    } catch (e) {
+      debugPrint('[PUB] Error obtenerIdUsuarioActual: $e');
+      return null;
+    }
+  }
+
 
   // ===========================
   // Crear publicación
@@ -281,6 +292,24 @@ class PublicacionesService {
       return [];
     }
   }
+  static Future<String?> eliminarPublicacion(int idPublicacion) async {
+    try {
+      final me = await _getUsuarioActualRow();
+      final idUsuario = me['id'] as int;
+
+      await _db
+          .from('publicacion')
+          .delete()
+          .match({'id': idPublicacion, 'id_usuario': idUsuario});
+
+      // Asumimos que en la BD tenés ON DELETE CASCADE para media/comentarios
+      return null;
+    } catch (e) {
+      debugPrint('[PUB] Error eliminarPublicacion: $e');
+      return 'No se pudo eliminar la publicación';
+    }
+  }
+
 
   // ===========================
   // Feed (yo + amigos)
@@ -391,6 +420,36 @@ class PublicacionesService {
   // ===========================
   // Comentarios
   // ===========================
+  static Future<int> contarComentarios(int idPublicacion) async {
+    try {
+      final res = await _db
+          .from('comentario_publicacion')
+          .select('id')
+          .eq('id_publicacion', idPublicacion);
+
+      final lista = res as List;
+      return lista.length;
+    } catch (e) {
+      debugPrint('[PUB] Error contarComentarios: $e');
+      return 0;
+    }
+  }
+  static Future<String?> eliminarComentario(int idComentario) async {
+    try {
+      final me = await _getUsuarioActualRow();
+      final idUsuario = me['id'] as int;
+
+      await _db
+          .from('comentario_publicacion')
+          .delete()
+          .match({'id': idComentario, 'id_usuario': idUsuario});
+
+      return null;
+    } catch (e) {
+      debugPrint('[PUB] Error eliminarComentario: $e');
+      return 'No se pudo eliminar el comentario';
+    }
+  }
 
   static Future<List<ComentarioPublicacionModel>> obtenerComentarios(
       int idPublicacion) async {

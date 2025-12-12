@@ -97,6 +97,7 @@ class _PantallaFeedState extends State<PantallaFeed> {
             return PublicacionCard(
               publicacion: pub,
               mostrarEvento: true,
+              onEliminada: _cargarFeed,
             );
           },
         ),

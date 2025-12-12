@@ -14,11 +14,13 @@ import 'comentarios_publicacion_sheet.dart';
 class PublicacionCard extends StatefulWidget {
   final PublicacionModel publicacion;
   final bool mostrarEvento;
+  final VoidCallback? onEliminada;
 
   const PublicacionCard({
     super.key,
     required this.publicacion,
     this.mostrarEvento = false,
+    this.onEliminada,
   });
 
   @override
@@ -29,10 +31,22 @@ class _PublicacionCardState extends State<PublicacionCard> {
   int _likes = 0;
   bool _cargandoLikes = true;
 
+  int _comentarios = 0;
+  bool _cargandoComentarios = true;
+
+  int? _miId;
   @override
   void initState() {
     super.initState();
     _cargarLikes();
+    _cargarComentarios();
+    _cargarMiId();
+  }
+  Future<void> _cargarMiId() async {
+    final id = await PublicacionesService.obtenerIdUsuarioActual();
+    if (mounted) {
+      setState(() => _miId = id);
+    }
   }
 
   Future<void> _cargarLikes() async {
@@ -45,6 +59,60 @@ class _PublicacionCardState extends State<PublicacionCard> {
       });
     }
   }
+  Future<void> _cargarComentarios() async {
+    setState(() => _cargandoComentarios = true);
+    final cant = await PublicacionesService
+        .contarComentarios(widget.publicacion.id);
+    if (!mounted) return;
+    setState(() {
+      _comentarios = cant;
+      _cargandoComentarios = false;
+    });
+  }
+  Future<void> _eliminarPublicacion() async {
+    // solo si es mía
+    if (_miId == null || _miId != widget.publicacion.idUsuario) {
+      return;
+    }
+
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Eliminar publicación'),
+        content: const Text(
+            '¿Seguro que deseas eliminar esta publicación?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    final err = await PublicacionesService
+        .eliminarPublicacion(widget.publicacion.id);
+
+    if (!mounted) return;
+
+    if (err != null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(err)));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Publicación eliminada')),
+      );
+      widget.onEliminada?.call();   // que el padre recargue la lista
+    }
+  }
+
+
 
   Future<void> _toggleLike() async {
     final err = await PublicacionesService.toggleLike(widget.publicacion.id);
@@ -68,6 +136,7 @@ class _PublicacionCardState extends State<PublicacionCard> {
         );
       },
     );
+    await _cargarComentarios();
   }
 
   String _formatearFecha(DateTime f) {
@@ -259,57 +328,63 @@ class _PublicacionCardState extends State<PublicacionCard> {
   @override
   Widget build(BuildContext context) {
     final p = widget.publicacion;
-
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      elevation: 3,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(),
-            const SizedBox(height: 8),
-
-            if ((p.contenido ?? '').isNotEmpty) ...[
-              Text(p.contenido!),
+    return GestureDetector(
+      onLongPress: _eliminarPublicacion,
+      child: Card(
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        elevation: 3,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(),
               const SizedBox(height: 8),
-            ],
 
-            _buildCarruselMedia(),
-            _buildResumenEvento(),
-
-            const SizedBox(height: 8),
-            const Divider(),
-
-            Row(
-              children: [
-                IconButton(
-                  onPressed: _toggleLike,
-                  icon: const Icon(Icons.favorite, color: Colors.red),
-                ),
-                if (_cargandoLikes)
-                  const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                else
-                  Text('$_likes'),
-
-                const Spacer(),
-
-                TextButton.icon(
-                  onPressed: _abrirComentarios,
-                  icon: const Icon(Icons.comment_outlined),
-                  label: const Text('Comentarios'),
-                ),
+              if ((p.contenido ?? '').isNotEmpty) ...[
+                Text(p.contenido!),
+                const SizedBox(height: 8),
               ],
-            ),
-          ],
+
+              _buildCarruselMedia(),
+              _buildResumenEvento(),
+
+              const SizedBox(height: 8),
+              const Divider(),
+
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: _toggleLike,
+                    icon: const Icon(Icons.favorite, color: Colors.red),
+                  ),
+                  if (_cargandoLikes)
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else
+                    Text('$_likes'),
+
+                  const Spacer(),
+
+                  TextButton.icon(
+                    onPressed: _abrirComentarios,
+                    icon: const Icon(Icons.comment_outlined),
+                    label: Text(
+                      _cargandoComentarios
+                          ? 'Comentarios'
+                          : 'Comentarios ($_comentarios)',
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
