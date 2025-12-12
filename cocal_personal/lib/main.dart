@@ -1,5 +1,7 @@
 // main.dart
+import 'package:cocal_personal/proveedores/theme_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'servicios/supabase_service.dart';
 import 'servicios/notificacion_sistema_service.dart';
 import 'rutas/rutas_app.dart';
@@ -14,7 +16,12 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SupabaseService.inicializar();
   await NotificacionSistemaService.inicializar();
-  runApp(const AplicacionCoCal());
+  runApp(
+    MultiProvider(
+      providers: [ChangeNotifierProvider(create: (_) => ThemeProvider())],
+      child: const AplicacionCoCal(),
+    ),
+  );
 }
 
 class AplicacionCoCal extends StatelessWidget {
@@ -22,6 +29,8 @@ class AplicacionCoCal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     // Comprobar si hay un intent de navegación pendiente (desde notificación)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       NotificacionSistemaService.ejecutarIntentPendiente();
@@ -31,12 +40,14 @@ class AplicacionCoCal extends StatelessWidget {
       title: 'CoCal',
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
-      theme: AppTheme.light(),
+      theme: themeProvider.lightTheme,
+      darkTheme: themeProvider.darkTheme,
+      themeMode: themeProvider.themeMode,
       routes: obtenerRutas(),
       onGenerateRoute: generarRuta,
       // 👇 El árbol arranca en el AuthGate
       home: const AuthGate(
-        loggedOut: PantallaLogin(),   // en vez de PantallaInicio
+        loggedOut: PantallaLogin(), // en vez de PantallaInicio
         loggedIn: PantallaPrincipal(),
       ),
     );
