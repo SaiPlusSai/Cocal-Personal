@@ -4,6 +4,7 @@ import '../../servicios/supabase_service.dart';
 import '../../servicios/social/amigos_service.dart';
 import '../../servicios/social/modelos_amigos.dart';
 import '../../servicios/temas_interes_service.dart';
+import '../social/pantalla_perfil_usuario.dart';
 
 class PantallaPerfil extends StatefulWidget {
   const PantallaPerfil({super.key});
@@ -182,8 +183,13 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
                               title: Text(a.nombreCompleto),
                               subtitle: Text(a.correo),
                               onTap: () {
-                                // Opcional: navegar al perfil del amigo
-                                Navigator.pushNamed(context, '/perfil-usuario', arguments: {'userId': a.id});
+                                  // Navegar al perfil del amigo tocado
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => PantallaPerfilUsuario(userId: a.id),
+                                    ),
+                                  );
                               },
                             );
                           },
