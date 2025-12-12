@@ -5,6 +5,7 @@ import '../calendario/pantalla_calendario_general.dart';
 import '../social/pantalla_grupos.dart';
 import '../social/pantalla_usuarios.dart';
 import '../../widgets/drawer_usuario.dart';
+import '../social/pantalla_feed.dart';
 
 class PantallaPrincipal extends StatefulWidget {
   const PantallaPrincipal({super.key});
@@ -68,10 +69,12 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
     switch (_indiceActual) {
       case 0:
         return 'Tu calendario';
-      case 1:
-        return 'Buscar usuarios';
       case 2:
+        return 'Buscar usuarios';
+      case 3:
         return 'Grupos';
+      case 1:
+        return 'Inicio';
       default:
         return 'CoCal';
     }
@@ -88,12 +91,15 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
         return PantallaCalendarioGeneral(
           correo: correoUsuario ?? '',
         );
-      case 1:
+      case 2:
       // Búsqueda de usuarios
         return const PantallaUsuarios();
-      case 2:
+      case 3:
       // Lista de grupos
         return const PantallaGrupos();
+        // Feed del usuario
+      case 1:
+        return const PantallaFeed();
       default:
         return const SizedBox.shrink();
     }
@@ -137,6 +143,10 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
           BottomNavigationBarItem(
             icon: Icon(Icons.calendar_month),
             label: 'Calendario',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            label: 'Inicio',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.search),

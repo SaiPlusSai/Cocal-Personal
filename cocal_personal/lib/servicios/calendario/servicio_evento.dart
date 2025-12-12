@@ -1,5 +1,6 @@
 // lib/servicios/calendario/servicio_evento.dart
 import '../supabase_service.dart';
+import 'package:flutter/foundation.dart';
 
 class ServicioEvento {
   static final _cliente = SupabaseService.cliente;
@@ -58,6 +59,21 @@ class ServicioEvento {
     await _cliente
         .from('evento')
         .update({'recordatorio_minutos': minutos}).eq('id', idEvento);
+  }
+  static Future<Map<String, dynamic>?> obtenerEventoPorId(int idEvento) async {
+    try {
+      final res = await SupabaseService.cliente
+          .from('evento')
+          .select()
+          .eq('id', idEvento)
+          .maybeSingle();
+
+      if (res == null) return null;
+      return Map<String, dynamic>.from(res as Map);
+    } catch (e) {
+      debugPrint('[EVENTO] Error obtenerEventoPorId: $e');
+      return null;
+    }
   }
 }
 
