@@ -41,7 +41,7 @@ dependencies:
   shared_preferences: ^2.3.2
   crypto: ^3.0.5
 
-  google_fonts: ^6.2.1
+  google_fonts: ^6.3.3
   font_awesome_flutter: ^10.7.0
   flutter_svg: ^2.0.9
   responsive_framework: ^1.2.0

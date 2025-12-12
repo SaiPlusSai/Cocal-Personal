@@ -18,7 +18,7 @@ class _PantallaConfiguracionState extends State<PantallaConfiguracion> {
     final headerColor = themeProvider.accentColor;
 
     return Scaffold(
-      appBar: AppBar(title: Text('Configuracion')),
+      appBar: AppBar(title: Text('Configuración')),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -32,7 +32,7 @@ class _PantallaConfiguracionState extends State<PantallaConfiguracion> {
           // Light Theme Option
           _buildThemeOption(
             context,
-            title: "Light theme",
+            title: "Tema claro",
             value: ThemeMode.light,
             groupValue: themeProvider.themeMode,
             onChanged: (val) => themeProvider.setThemeMode(val!),
@@ -41,7 +41,7 @@ class _PantallaConfiguracionState extends State<PantallaConfiguracion> {
           // Dark Theme Option
           _buildThemeOption(
             context,
-            title: "Dark theme",
+            title: "Tema oscuro",
             value: ThemeMode.dark,
             groupValue: themeProvider.themeMode,
             onChanged: (val) => themeProvider.setThemeMode(val!),
@@ -52,7 +52,7 @@ class _PantallaConfiguracionState extends State<PantallaConfiguracion> {
           // Accent Color Picker Tile
           ListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text("Accent color"),
+            title: const Text("Color"),
             trailing: CircleAvatar(
               backgroundColor: themeProvider.accentColor,
               radius: 15,
@@ -60,6 +60,32 @@ class _PantallaConfiguracionState extends State<PantallaConfiguracion> {
             onTap: () {
               _showColorPickerDialog(context, themeProvider);
             },
+          ),
+
+          const Divider(height: 30),
+
+          // --- TYPOGRAPHY ---
+          Text("Tipografía", style: _headerStyle(headerColor)),
+          const SizedBox(height: 10),
+
+          // Font Family Dropdown
+          ListTile(
+            title: const Text("Fuente"),
+            trailing: DropdownButton<String>(
+              value: themeProvider.fontFamily,
+              underline: const SizedBox(),
+              items: themeProvider.availableFonts.map((String font) {
+                return DropdownMenuItem<String>(
+                  value: font,
+                  child: Text(font, style: TextStyle(fontFamily: font)),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                if (newValue != null) {
+                  themeProvider.setFontFamily(newValue);
+                }
+              },
+            ),
           ),
         ],
       ),
@@ -138,5 +164,21 @@ class _PantallaConfiguracionState extends State<PantallaConfiguracion> {
         );
       },
     );
+  }
+
+  TextStyle _headerStyle(Color color) {
+    return TextStyle(
+      color: color,
+      fontWeight: FontWeight.bold,
+      fontSize: 14,
+      letterSpacing: 1.0,
+    );
+  }
+
+  String _getFontSizeLabel(double factor) {
+    if (factor <= 0.8) return "Small";
+    if (factor == 1.0) return "Normal";
+    if (factor == 1.2) return "Large";
+    return "Extra Large";
   }
 }
