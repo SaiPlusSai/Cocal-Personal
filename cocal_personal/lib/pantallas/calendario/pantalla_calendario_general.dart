@@ -62,8 +62,9 @@ class _PantallaCalendarioGeneralState extends State<PantallaCalendarioGeneral> {
   Future<void> _cargarEventos() async {
     setState(() => _cargando = true);
 
-    final idUsuario =
-    await ServicioCalendario.obtenerUsuarioIdPorCorreo(widget.correo);
+    final idUsuario = await ServicioCalendario.obtenerUsuarioIdPorCorreo(
+      widget.correo,
+    );
 
     if (idUsuario == null) {
       setState(() => _cargando = false);
@@ -71,17 +72,12 @@ class _PantallaCalendarioGeneralState extends State<PantallaCalendarioGeneral> {
     }
 
     final idsCal =
-    await ServicioCalendario.obtenerCalendariosVisiblesDelUsuario(
-        idUsuario);
+        await ServicioCalendario.obtenerCalendariosVisiblesDelUsuario(
+          idUsuario,
+        );
 
     final desde = DateTime(_focusedDay.year, _focusedDay.month - 1, 1);
-    final hasta = DateTime(
-      _focusedDay.year,
-      _focusedDay.month + 2,
-      0,
-      23,
-      59,
-    );
+    final hasta = DateTime(_focusedDay.year, _focusedDay.month + 2, 0, 23, 59);
 
     final lista = await ServicioCalendario.listarEventosUsuarioEnRango(
       idsCalendario: idsCal,
@@ -113,16 +109,9 @@ class _PantallaCalendarioGeneralState extends State<PantallaCalendarioGeneral> {
     }
 
     final desde = DateTime(_focusedDay.year, _focusedDay.month - 1, 1);
-    final hasta = DateTime(
-      _focusedDay.year,
-      _focusedDay.month + 2,
-      0,
-      23,
-      59,
-    );
+    final hasta = DateTime(_focusedDay.year, _focusedDay.month + 2, 0, 23, 59);
 
-    final eventosGrupo =
-    await ServicioCalendario.listarEventosDeGrupoEnRango(
+    final eventosGrupo = await ServicioCalendario.listarEventosDeGrupoEnRango(
       idGrupo: idGrupo,
       desde: desde,
       hasta: hasta,
@@ -147,8 +136,9 @@ class _PantallaCalendarioGeneralState extends State<PantallaCalendarioGeneral> {
       final day = entry.key;
       final slots = entry.value;
 
-      final hayCoincidencia =
-      slots.values.any((setUsuarios) => setUsuarios.length >= minimoUsuarios);
+      final hayCoincidencia = slots.values.any(
+        (setUsuarios) => setUsuarios.length >= minimoUsuarios,
+      );
       if (hayCoincidencia) {
         _diasConCoincidencias.add(day);
       }
@@ -190,21 +180,20 @@ class _PantallaCalendarioGeneralState extends State<PantallaCalendarioGeneral> {
 
   Future<void> _crearNuevoEvento() async {
     try {
-      final idUsuario =
-      await ServicioCalendario.obtenerUsuarioIdPorCorreo(widget.correo);
+      final idUsuario = await ServicioCalendario.obtenerUsuarioIdPorCorreo(
+        widget.correo,
+      );
 
       if (idUsuario == null) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No se pudo obtener el usuario actual'),
-          ),
+          const SnackBar(content: Text('No se pudo obtener el usuario actual')),
         );
         return;
       }
 
       final calPersonal =
-      await ServicioCalendario.obtenerOCrearCalendarioPersonal(idUsuario);
+          await ServicioCalendario.obtenerOCrearCalendarioPersonal(idUsuario);
 
       if (calPersonal == null) {
         if (!mounted) return;
@@ -238,23 +227,22 @@ class _PantallaCalendarioGeneralState extends State<PantallaCalendarioGeneral> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ Error al crear evento: $e'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('❌ Error al crear evento: $e')));
     }
   }
 
   /// Celda para el calendario general: días con eventos pintados y
   /// coincidencias de grupo resaltadas.
   Widget _buildDayCell(
-      BuildContext context,
-      DateTime day,
-      DateTime focusedDay, {
-        bool isSelected = false,
-        bool isToday = false,
-      }) {
+    BuildContext context,
+    DateTime day,
+    DateTime focusedDay, {
+    bool isSelected = false,
+    bool isToday = false,
+  }) {
+    final theme = Theme.of(context);
     final events = _getEventosDelDia(day);
     final key = DateTime(day.year, day.month, day.day);
 
@@ -262,6 +250,7 @@ class _PantallaCalendarioGeneralState extends State<PantallaCalendarioGeneral> {
     final tieneCoincidencia = _diasConCoincidencias.contains(key);
 
     Color bgColor = Colors.transparent;
+    final primaryColor = theme.colorScheme.primary;
 
     if (hayEventos) {
       // Color suave si solo son tus eventos
@@ -293,7 +282,7 @@ class _PantallaCalendarioGeneralState extends State<PantallaCalendarioGeneral> {
           '${day.day}',
           style: TextStyle(
             fontWeight: hayEventos ? FontWeight.w600 : FontWeight.normal,
-            color: Colors.black87,
+            color: theme.textTheme.bodyMedium?.color,
           ),
         ),
       ),
@@ -307,6 +296,7 @@ class _PantallaCalendarioGeneralState extends State<PantallaCalendarioGeneral> {
     }
 
     final eventosDelDia = _getEventosDelDia(_selectedDay ?? _focusedDay);
+    final theme = Theme.of(context);
 
     return Stack(
       children: [
@@ -314,8 +304,7 @@ class _PantallaCalendarioGeneralState extends State<PantallaCalendarioGeneral> {
           children: [
             _buildFiltrosGrupos(),
             Padding(
-              padding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
@@ -362,9 +351,31 @@ class _PantallaCalendarioGeneralState extends State<PantallaCalendarioGeneral> {
                 _cargarEventos();
                 _calcularCoincidenciasGrupoSeleccionado();
               },
-              calendarStyle: const CalendarStyle(
-                outsideDaysVisible: false,
+              daysOfWeekStyle: DaysOfWeekStyle(
+                weekdayStyle: TextStyle(
+                  color: theme.textTheme.bodyMedium?.color,
+                ),
+                weekendStyle: TextStyle(
+                  color: theme.textTheme.bodyMedium?.color,
+                ),
               ),
+              headerStyle: HeaderStyle(
+                titleTextStyle: TextStyle(
+                  color: theme.textTheme.titleLarge?.color,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                formatButtonVisible: false, // We use chips instead
+                leftChevronIcon: Icon(
+                  Icons.chevron_left,
+                  color: theme.iconTheme.color,
+                ),
+                rightChevronIcon: Icon(
+                  Icons.chevron_right,
+                  color: theme.iconTheme.color,
+                ),
+              ),
+              calendarStyle: const CalendarStyle(outsideDaysVisible: false),
               calendarBuilders: CalendarBuilders(
                 defaultBuilder: (context, day, focusedDay) =>
                     _buildDayCell(context, day, focusedDay),
@@ -377,49 +388,48 @@ class _PantallaCalendarioGeneralState extends State<PantallaCalendarioGeneral> {
             const Divider(),
             Expanded(
               child: eventosDelDia.isEmpty
-                  ? const Center(
-                child: Text('No tienes eventos este día.'),
-              )
+                  ? const Center(child: Text('No tienes eventos este día.'))
                   : ListView.builder(
-                itemCount: eventosDelDia.length,
-                itemBuilder: (_, i) {
-                  final ev = eventosDelDia[i];
-                  final creador =
-                      ev['creador']?.toString() ?? 'Desconocido';
-                  final fecha =
-                  DateTime.parse(ev['horario']).toLocal();
-                  final hora =
-                  TimeOfDay.fromDateTime(fecha).format(context);
+                      itemCount: eventosDelDia.length,
+                      itemBuilder: (_, i) {
+                        final ev = eventosDelDia[i];
+                        final creador =
+                            ev['creador']?.toString() ?? 'Desconocido';
+                        final fecha = DateTime.parse(ev['horario']).toLocal();
+                        final hora = TimeOfDay.fromDateTime(
+                          fecha,
+                        ).format(context);
 
-                  final descripcion = (ev['descripcion'] ?? '').toString();
+                        final descripcion = (ev['descripcion'] ?? '')
+                            .toString();
 
-                  return ListTile(
-                    title: Text(ev['titulo'] ?? 'Sin título'),
-                    subtitle: Text(
-                      [
-                        if (descripcion.isNotEmpty) descripcion,
-                        'Hora: $hora',
-                        'Creado por: $creador',
-                      ].join('\n'),
-                    ),
-                    isThreeLine: true,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => PantallaDetalleEvento(
-                            evento: ev,
-                            onGuardado: () async {
-                              await _cargarEventos();
-                              await _calcularCoincidenciasGrupoSeleccionado();
-                            },
+                        return ListTile(
+                          title: Text(ev['titulo'] ?? 'Sin título'),
+                          subtitle: Text(
+                            [
+                              if (descripcion.isNotEmpty) descripcion,
+                              'Hora: $hora',
+                              'Creado por: $creador',
+                            ].join('\n'),
                           ),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
+                          isThreeLine: true,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => PantallaDetalleEvento(
+                                  evento: ev,
+                                  onGuardado: () async {
+                                    await _cargarEventos();
+                                    await _calcularCoincidenciasGrupoSeleccionado();
+                                  },
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
             ),
           ],
         ),
