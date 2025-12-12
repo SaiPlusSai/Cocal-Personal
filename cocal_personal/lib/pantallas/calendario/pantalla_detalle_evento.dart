@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import '../../servicios/supabase_service.dart';
 import '../../servicios/notificacion_service.dart';
 import '../../servicios/calendario/servicio_evento.dart';
-
+import 'widgets/formulario_evento.dart';
+import 'widgets/conversacion_evento.dart';
 
 class PantallaDetalleEvento extends StatefulWidget {
   final Map<String, dynamic> evento;
@@ -37,7 +38,7 @@ class _PantallaDetalleEventoState extends State<PantallaDetalleEvento> {
     'VIDEOJUEGOS',
     'ANIME',
     'LITERATURA',
-    'DEPORTES'
+    'DEPORTES',
   ];
   final estados = const ['ACTIVO', 'EN_DESARROLLO', 'INACTIVO'];
   final visibilidades = const ['PUBLICO', 'PRIVADO', 'GRUPO'];
@@ -108,7 +109,7 @@ class _PantallaDetalleEventoState extends State<PantallaDetalleEvento> {
         await NotificacionService.programarNotificacion(
           titulo: '⏰ Recordatorio actualizado',
           cuerpo:
-              'Tu evento "${_tituloCtl.text}" empieza en $_recordatorioMinutos minutos.',
+          'Tu evento "${_tituloCtl.text}" empieza en $_recordatorioMinutos minutos.',
           fecha: fechaProgramar,
         );
       }
@@ -192,10 +193,13 @@ class _PantallaDetalleEventoState extends State<PantallaDetalleEvento> {
     if (minutos != null && minutos > 0) {
       setState(() => _recordatorioMinutos = minutos);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('🔔 Recordatorio ajustado a $minutos minutos antes')),
+        SnackBar(
+          content: Text('🔔 Recordatorio ajustado a $minutos minutos antes'),
+        ),
       );
     }
   }
+
   Future<void> _eliminarEvento() async {
     final confirmar = await showDialog<bool>(
       context: context,
@@ -225,8 +229,8 @@ class _PantallaDetalleEventoState extends State<PantallaDetalleEvento> {
         const SnackBar(content: Text('🗑️ Evento eliminado')),
       );
 
-      widget.onGuardado();      // recargar lista en la pantalla anterior
-      Navigator.pop(context);   // volver
+      widget.onGuardado();
+      Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -237,11 +241,9 @@ class _PantallaDetalleEventoState extends State<PantallaDetalleEvento> {
 
   @override
   Widget build(BuildContext context) {
-    final fechaTexto =
-        '${_fecha.day}/${_fecha.month}/${_fecha.year} ${_hora.format(context)}';
-
     return Scaffold(
-      appBar: AppBar(title: const Text('✏️ Editar evento'),
+      appBar: AppBar(
+        title: const Text('✏️ Editar evento'),
         actions: [
           IconButton(
             icon: const Icon(Icons.delete),
@@ -249,77 +251,37 @@ class _PantallaDetalleEventoState extends State<PantallaDetalleEvento> {
           ),
         ],
       ),
-
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: SingleChildScrollView(
           child: Column(
             children: [
-              TextField(
-                controller: _tituloCtl,
-                decoration: const InputDecoration(labelText: 'Título'),
+              FormularioEvento(
+                tituloCtl: _tituloCtl,
+                descCtl: _descCtl,
+                fecha: _fecha,
+                hora: _hora,
+                tema: _tema,
+                estado: _estado,
+                visibilidad: _visibilidad,
+                recordatorioMinutos: _recordatorioMinutos,
+                temas: temas,
+                estados: estados,
+                visibilidades: visibilidades,
+                onTemaChanged: (v) => setState(() => _tema = v),
+                onEstadoChanged: (v) => setState(() => _estado = v),
+                onVisibilidadChanged: (v) =>
+                    setState(() => _visibilidad = v),
+                onSeleccionarFecha: _seleccionarFecha,
+                onSeleccionarHora: _seleccionarHora,
+                onCambiarRecordatorio: _cambiarRecordatorio,
+                onGuardarCambios: _guardarCambios,
               ),
-              TextField(
-                controller: _descCtl,
-                maxLines: 3,
-                decoration: const InputDecoration(labelText: 'Descripción'),
-              ),
+              const SizedBox(height: 30),
+              const Divider(),
               const SizedBox(height: 10),
-              ListTile(
-                leading: const Icon(Icons.calendar_today),
-                title: Text('Fecha y hora: $fechaTexto'),
-                onTap: _seleccionarFecha,
-                trailing: IconButton(
-                  icon: const Icon(Icons.access_time),
-                  onPressed: _seleccionarHora,
-                ),
-              ),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                value: _tema,
-                items: temas
-                    .map((t) => DropdownMenuItem(value: t, child: Text(t)))
-                    .toList(),
-                onChanged: (v) => setState(() => _tema = v ?? _tema),
-                decoration: const InputDecoration(labelText: 'Tema'),
-              ),
-              DropdownButtonFormField<String>(
-                value: _estado,
-                items: estados
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                    .toList(),
-                onChanged: (v) => setState(() => _estado = v ?? _estado),
-                decoration: const InputDecoration(labelText: 'Estado'),
-              ),
-              DropdownButtonFormField<String>(
-                value: _visibilidad,
-                items: visibilidades
-                    .map((v) => DropdownMenuItem(value: v, child: Text(v)))
-                    .toList(),
-                onChanged: (v) => setState(() => _visibilidad = v ?? _visibilidad),
-                decoration: const InputDecoration(labelText: 'Visibilidad'),
-              ),
-              const SizedBox(height: 10),
-              if (_recordatorioMinutos != null)
-                Text(
-                  '🔔 Recordatorio actual: $_recordatorioMinutos min antes',
-                  style: const TextStyle(color: Colors.amber),
-                ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.notifications),
-                label: const Text('Configurar recordatorio'),
-                onPressed: _cambiarRecordatorio,
-              ),
-              const SizedBox(height: 25),
-              ElevatedButton.icon(
-                onPressed: _guardarCambios,
-                icon: const Icon(Icons.save),
-                label: const Text('Guardar cambios'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.indigo,
-                  minimumSize: const Size(double.infinity, 45),
-                ),
+              ConversacionEvento(
+                eventoId: widget.evento['id'] as int,
               ),
             ],
           ),
