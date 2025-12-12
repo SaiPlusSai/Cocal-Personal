@@ -10,6 +10,7 @@ import '../pantallas/social/pantalla_solicitudes.dart';
 import '../pantallas/perfil/pantalla_perfil.dart';
 import '../pantallas/perfil/pantalla_configuracion.dart';
 import '../pantallas/perfil/pantalla_editar_perfil.dart';
+import '../pantallas/social/pantalla_perfil_usuario.dart';
 
 Map<String, WidgetBuilder> obtenerRutas() {
   return {
@@ -28,5 +29,24 @@ Map<String, WidgetBuilder> obtenerRutas() {
 }
 
 Route<dynamic>? generarRuta(RouteSettings settings) {
+  // Ruta dinámica para abrir el perfil de un usuario pasando el `userId`
+  if (settings.name == '/perfil-usuario') {
+    final args = settings.arguments;
+    int? userId;
+
+    if (args is Map && args['userId'] is int) {
+      userId = args['userId'] as int;
+    } else if (args is int) {
+      userId = args;
+    }
+
+    if (userId != null) {
+      return MaterialPageRoute(
+        builder: (_) => PantallaPerfilUsuario(userId: userId!),
+        settings: settings,
+      );
+    }
+  }
+
   return null;
 }

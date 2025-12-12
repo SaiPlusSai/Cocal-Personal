@@ -4,6 +4,7 @@ import '../../servicios/supabase_service.dart';
 import '../../servicios/social/amigos_service.dart';
 import '../../servicios/social/modelos_amigos.dart';
 import '../../servicios/temas_interes_service.dart';
+import '../social/pantalla_perfil_usuario.dart';
 import '../../servicios/social/publicaciones_service.dart';
 import '../../servicios/social/modelos_publicacion.dart';
 import '../social/widgets/publicacion_card.dart';
@@ -244,34 +245,67 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
             )
                 : _amigos.isEmpty
                 ? const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Center(child: Text('No tienes amigos aún')),
-            )
-                : ListView.separated(
-              padding: const EdgeInsets.all(8),
-              itemCount: _amigos.length,
-              itemBuilder: (context, i) {
-                final a = _amigos[i];
-                return ListTile(
-                  leading: CircleAvatar(
-                    child: Text(
-                      a.nombre.isNotEmpty ? a.nombre[0] : '?',
-                    ),
-                  ),
-                  title: Text(a.nombreCompleto),
-                  subtitle: Text(a.correo),
-                  onTap: () {
-                    // Opcional: navegar al perfil del amigo
-                    Navigator.pushNamed(
-                      context,
-                      '/perfil-usuario',
-                      arguments: {'userId': a.id},
-                    );
-                  },
-                );
-              },
-              separatorBuilder: (_, __) =>
-              const Divider(height: 1),
+                    padding: EdgeInsets.all(16.0),
+                    child: CircularProgressIndicator(),
+                  )
+                : _temas.isEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Text('No has añadido temas de interés'),
+                      )
+                    : Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _temas.map((tema) {
+                          return Chip(
+                            label: Text(tema.nombre),
+                          );
+                        }).toList(),
+                      ),
+            const SizedBox(height: 20),
+
+            // Amigos section
+            const Text('Mis amigos', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Container(
+              constraints: const BoxConstraints(maxHeight: 220),
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
+              ),
+              child: _cargandoAmigos
+                  ? const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  : _amigos.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: Center(child: Text('No tienes amigos aún')),
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.all(8),
+                          itemCount: _amigos.length,
+                          itemBuilder: (context, i) {
+                            final a = _amigos[i];
+                            return ListTile(
+                              leading: CircleAvatar(child: Text(a.nombre.isNotEmpty ? a.nombre[0] : '?')),
+                              title: Text(a.nombreCompleto),
+                              subtitle: Text(a.correo),
+                              onTap: () {
+                                  // Navegar al perfil del amigo tocado
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => PantallaPerfilUsuario(userId: a.id),
+                                    ),
+                                  );
+                              },
+                            );
+                          },
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                        ),
             ),
           ),
 

@@ -337,6 +337,16 @@ class _DialogoListaAmigosState extends State<_DialogoListaAmigos> {
                   leading: const CircleAvatar(child: Icon(Icons.person)),
                   title: Text('${amigo.nombre} ${amigo.apellido}'),
                   subtitle: Text(amigo.correo),
+                  onTap: () {
+                    // Cerrar diálogo y navegar al perfil del amigo seleccionado
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PantallaPerfilUsuario(userId: amigo.id),
+                      ),
+                    );
+                  },
                 );
               },
             );
