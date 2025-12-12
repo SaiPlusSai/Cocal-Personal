@@ -9,6 +9,7 @@ import '../../calendario/pantalla_detalle_evento.dart';
 
 // 👇 importamos el reproductor inline del foro
 import '../foro/widgets/foro_video_player.dart';
+import 'comentarios_publicacion_sheet.dart';
 
 class PublicacionCard extends StatefulWidget {
   final PublicacionModel publicacion;
@@ -53,6 +54,20 @@ class _PublicacionCardState extends State<PublicacionCard> {
       );
     }
     await _cargarLikes();
+  }
+  Future<void> _abrirComentarios() async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) {
+        return ComentariosPublicacionSheet(
+          idPublicacion: widget.publicacion.id,
+        );
+      },
+    );
   }
 
   String _formatearFecha(DateTime f) {
@@ -284,10 +299,14 @@ class _PublicacionCardState extends State<PublicacionCard> {
                   )
                 else
                   Text('$_likes'),
-                const SizedBox(width: 16),
-                const Icon(Icons.comment, size: 20),
-                const SizedBox(width: 4),
-                const Text('Comentarios'),
+
+                const Spacer(),
+
+                TextButton.icon(
+                  onPressed: _abrirComentarios,
+                  icon: const Icon(Icons.comment_outlined),
+                  label: const Text('Comentarios'),
+                ),
               ],
             ),
           ],
