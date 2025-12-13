@@ -1,15 +1,12 @@
-// lib/pantallas/perfil/pantalla_perfil.dart
+//lib/pantallas/perfil/pantalla_perfil.dart
 import 'package:flutter/material.dart';
 import '../../servicios/supabase_service.dart';
 import '../../servicios/social/amigos_service.dart';
 import '../../servicios/social/modelos_amigos.dart';
 import '../../servicios/temas_interes_service.dart';
-import '../../servicios/social/publicaciones_service.dart';
-import '../../servicios/social/modelos_publicacion.dart';
-import '../social/widgets/publicacion_card.dart';
 
 class PantallaPerfil extends StatefulWidget {
-  const PantallaPerfil({super.key});
+const PantallaPerfil({super.key});
 
   @override
   State<PantallaPerfil> createState() => _PantallaPerfilState();
@@ -21,16 +18,11 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
   String correo = '';
   bool cargando = true;
   String? fotoUrl;
-
   List<UsuarioResumen> _amigos = [];
   bool _cargandoAmigos = true;
-
   List<TemaInteres> _temas = [];
   bool _cargandoTemas = true;
 
-  int? _idUsuario;
-  List<PublicacionModel> _publicaciones = [];
-  bool _cargandoPublicaciones = true;
 
   @override
   void initState() {
@@ -45,28 +37,6 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
     super.didChangeDependencies();
     // Recargar datos cada vez que la pantalla vuelve a estar visible
     _cargarTemas();
-  }
-
-  Future<void> _cargarPublicaciones() async {
-    final id = _idUsuario;
-    if (id == null) return;
-
-    setState(() {
-      _cargandoPublicaciones = true;
-    });
-
-    try {
-      final pubs = await PublicacionesService.obtenerPublicacionesDePerfil(id);
-      setState(() {
-        _publicaciones = pubs;
-        _cargandoPublicaciones = false;
-      });
-    } catch (e) {
-      debugPrint('[PERFIL] Error cargando publicaciones: $e');
-      setState(() {
-        _cargandoPublicaciones = false;
-      });
-    }
   }
 
   Future<void> _cargarTemas() async {
@@ -109,12 +79,7 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
     final cliente = SupabaseService.cliente;
     final user = cliente.auth.currentUser;
 
-    if (user == null || user.email == null) {
-      setState(() {
-        cargando = false;
-      });
-      return;
-    }
+    if (user == null) return;
 
     final res = await cliente
         .from('usuario')
@@ -123,15 +88,13 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
         .single();
 
     setState(() {
-      _idUsuario = res['id'] as int;
       nombre = res['nombre'];
       apellido = res['apellido'] ?? '';
       correo = res['correo'];
-      fotoUrl = res['foto_url'];
       cargando = false;
-    });
+      fotoUrl = res['foto_url'];
 
-    await _cargarPublicaciones();
+    });
   }
 
   @override
@@ -308,20 +271,6 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
             style: Theme.of(context).textTheme.bodyMedium,
           ),
         ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: _cargarPublicaciones,
-      child: ListView.builder(
-        itemCount: _publicaciones.length,
-        itemBuilder: (_, i) {
-          final p = _publicaciones[i];
-          return PublicacionCard(
-            publicacion: p,
-            mostrarEvento: true,
-          );
-        },
       ),
     );
   }
