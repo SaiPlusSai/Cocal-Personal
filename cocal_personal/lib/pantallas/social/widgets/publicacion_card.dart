@@ -42,6 +42,7 @@ class _PublicacionCardState extends State<PublicacionCard> {
     _cargarComentarios();
     _cargarMiId();
   }
+
   Future<void> _cargarMiId() async {
     final id = await PublicacionesService.obtenerIdUsuarioActual();
     if (mounted) {
@@ -59,16 +60,18 @@ class _PublicacionCardState extends State<PublicacionCard> {
       });
     }
   }
+
   Future<void> _cargarComentarios() async {
     setState(() => _cargandoComentarios = true);
-    final cant = await PublicacionesService
-        .contarComentarios(widget.publicacion.id);
+    final cant =
+        await PublicacionesService.contarComentarios(widget.publicacion.id);
     if (!mounted) return;
     setState(() {
       _comentarios = cant;
       _cargandoComentarios = false;
     });
   }
+
   Future<void> _eliminarPublicacion() async {
     // solo si es mía
     if (_miId == null || _miId != widget.publicacion.idUsuario) {
@@ -79,8 +82,7 @@ class _PublicacionCardState extends State<PublicacionCard> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Eliminar publicación'),
-        content: const Text(
-            '¿Seguro que deseas eliminar esta publicación?'),
+        content: const Text('¿Seguro que deseas eliminar esta publicación?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -96,23 +98,20 @@ class _PublicacionCardState extends State<PublicacionCard> {
 
     if (confirmar != true) return;
 
-    final err = await PublicacionesService
-        .eliminarPublicacion(widget.publicacion.id);
+    final err =
+        await PublicacionesService.eliminarPublicacion(widget.publicacion.id);
 
     if (!mounted) return;
 
     if (err != null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(err)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Publicación eliminada')),
       );
-      widget.onEliminada?.call();   // que el padre recargue la lista
+      widget.onEliminada?.call(); // que el padre recargue la lista
     }
   }
-
-
 
   Future<void> _toggleLike() async {
     final err = await PublicacionesService.toggleLike(widget.publicacion.id);
@@ -123,6 +122,7 @@ class _PublicacionCardState extends State<PublicacionCard> {
     }
     await _cargarLikes();
   }
+
   Future<void> _abrirComentarios() async {
     await showModalBottomSheet(
       context: context,
@@ -149,8 +149,8 @@ class _PublicacionCardState extends State<PublicacionCard> {
 
   Widget _buildHeader() {
     final p = widget.publicacion;
-    final nombre =
-        (p.nombreAutor ?? '') + (p.apellidoAutor != null ? ' ${p.apellidoAutor}' : '');
+    final nombre = (p.nombreAutor ?? '') +
+        (p.apellidoAutor != null ? ' ${p.apellidoAutor}' : '');
     final fecha = _formatearFecha(p.creadoEn);
 
     return Row(
@@ -239,16 +239,18 @@ class _PublicacionCardState extends State<PublicacionCard> {
           margin: const EdgeInsets.only(top: 8),
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: Colors.green[50],
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.green.shade200),
+            border: Border.all(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.40)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  const Icon(Icons.event, color: Colors.green),
+                  Icon(Icons.event,
+                      color: Theme.of(context).colorScheme.primary),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
@@ -302,7 +304,7 @@ class _PublicacionCardState extends State<PublicacionCard> {
                 child: TextButton.icon(
                   onPressed: () async {
                     final ev =
-                    await ServicioEvento.obtenerEventoPorId(idEvento);
+                        await ServicioEvento.obtenerEventoPorId(idEvento);
                     if (ev == null || !context.mounted) return;
                     Navigator.push(
                       context,
@@ -343,18 +345,14 @@ class _PublicacionCardState extends State<PublicacionCard> {
             children: [
               _buildHeader(),
               const SizedBox(height: 8),
-
               if ((p.contenido ?? '').isNotEmpty) ...[
                 Text(p.contenido!),
                 const SizedBox(height: 8),
               ],
-
               _buildCarruselMedia(),
               _buildResumenEvento(),
-
               const SizedBox(height: 8),
               const Divider(),
-
               Row(
                 children: [
                   IconButton(
@@ -369,9 +367,7 @@ class _PublicacionCardState extends State<PublicacionCard> {
                     )
                   else
                     Text('$_likes'),
-
                   const Spacer(),
-
                   TextButton.icon(
                     onPressed: _abrirComentarios,
                     icon: const Icon(Icons.comment_outlined),
@@ -459,7 +455,9 @@ class _CarouselMediaState extends State<_CarouselMedia> {
               width: activo ? 10 : 6,
               height: 6,
               decoration: BoxDecoration(
-                color: activo ? Colors.indigo : Colors.grey[400],
+                color: activo
+                    ? Theme.of(context).colorScheme.secondary
+                    : Colors.grey[400],
                 borderRadius: BorderRadius.circular(12),
               ),
             );

@@ -17,7 +17,7 @@ class BarraNavegacion extends StatelessWidget {
       currentIndex: indice,
       onTap: onTap,
       type: BottomNavigationBarType.fixed,
-      selectedItemColor: Colors.indigo,
+      selectedItemColor: Theme.of(context).colorScheme.primary,
       unselectedItemColor: Colors.grey,
       showUnselectedLabels: true,
       items: const [

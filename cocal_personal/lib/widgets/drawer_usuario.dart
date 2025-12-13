@@ -19,24 +19,26 @@ class DrawerUsuario extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tieneFoto = fotoUrl != null && fotoUrl!.isNotEmpty;
+    final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.primary;
+    final secondaryColor = theme.colorScheme.secondary;
+
     return Drawer(
       child: Column(
         children: [
           UserAccountsDrawerHeader(
-            decoration: const BoxDecoration(
-              color: Colors.indigo,
-            ),
+            decoration: BoxDecoration(color: secondaryColor),
             accountName: Text('$nombre $apellido'),
             accountEmail: Text(correo),
             currentAccountPicture: CircleAvatar(
               backgroundColor: Colors.white,
               backgroundImage: tieneFoto
                   ? NetworkImage(
-                '$fotoUrl?v=${DateTime.now().millisecondsSinceEpoch}',
-              )
+                      '$fotoUrl?v=${DateTime.now().millisecondsSinceEpoch}',
+                    )
                   : null,
               child: !tieneFoto
-                  ? const Icon(Icons.person, size: 40, color: Colors.indigo)
+                  ? Icon(Icons.person, size: 40, color: primaryColor)
                   : null,
             ),
           ),

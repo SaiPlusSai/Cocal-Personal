@@ -147,11 +147,12 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Mi perfil'),
-          bottom: const TabBar(
+          bottom: TabBar(
             tabs: [
               Tab(text: 'Resumen'),
               Tab(text: 'Publicaciones'),
             ],
+            labelStyle: Theme.of(context).appBarTheme.titleTextStyle,
           ),
         ),
         body: TabBarView(
@@ -176,12 +177,10 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
             radius: 50,
             backgroundImage: fotoUrl != null
                 ? NetworkImage(
-              '$fotoUrl?v=${DateTime.now().millisecondsSinceEpoch}',
-            )
+                    '$fotoUrl?v=${DateTime.now().millisecondsSinceEpoch}',
+                  )
                 : null,
-            child: fotoUrl == null
-                ? const Icon(Icons.person, size: 50)
-                : null,
+            child: fotoUrl == null ? const Icon(Icons.person, size: 50) : null,
           ),
           const SizedBox(height: 20),
           Text(
@@ -203,23 +202,23 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
           const SizedBox(height: 8),
           _cargandoTemas
               ? const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: CircularProgressIndicator(),
-          )
+                  padding: EdgeInsets.all(16.0),
+                  child: CircularProgressIndicator(),
+                )
               : _temas.isEmpty
-              ? const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Text('No has añadido temas de interés'),
-          )
-              : Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _temas.map((tema) {
-              return Chip(
-                label: Text(tema.nombre),
-              );
-            }).toList(),
-          ),
+                  ? const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Text('No has añadido temas de interés'),
+                    )
+                  : Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _temas.map((tema) {
+                        return Chip(
+                          label: Text(tema.nombre),
+                        );
+                      }).toList(),
+                    ),
           const SizedBox(height: 20),
 
           // Amigos section
@@ -239,40 +238,39 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
             ),
             child: _cargandoAmigos
                 ? const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Center(child: CircularProgressIndicator()),
-            )
+                    padding: EdgeInsets.all(16.0),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
                 : _amigos.isEmpty
-                ? const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Center(child: Text('No tienes amigos aún')),
-            )
-                : ListView.separated(
-              padding: const EdgeInsets.all(8),
-              itemCount: _amigos.length,
-              itemBuilder: (context, i) {
-                final a = _amigos[i];
-                return ListTile(
-                  leading: CircleAvatar(
-                    child: Text(
-                      a.nombre.isNotEmpty ? a.nombre[0] : '?',
-                    ),
-                  ),
-                  title: Text(a.nombreCompleto),
-                  subtitle: Text(a.correo),
-                  onTap: () {
-                    // Opcional: navegar al perfil del amigo
-                    Navigator.pushNamed(
-                      context,
-                      '/perfil-usuario',
-                      arguments: {'userId': a.id},
-                    );
-                  },
-                );
-              },
-              separatorBuilder: (_, __) =>
-              const Divider(height: 1),
-            ),
+                    ? const Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Center(child: Text('No tienes amigos aún')),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(8),
+                        itemCount: _amigos.length,
+                        itemBuilder: (context, i) {
+                          final a = _amigos[i];
+                          return ListTile(
+                            leading: CircleAvatar(
+                              child: Text(
+                                a.nombre.isNotEmpty ? a.nombre[0] : '?',
+                              ),
+                            ),
+                            title: Text(a.nombreCompleto),
+                            subtitle: Text(a.correo),
+                            onTap: () {
+                              // Opcional: navegar al perfil del amigo
+                              Navigator.pushNamed(
+                                context,
+                                '/perfil-usuario',
+                                arguments: {'userId': a.id},
+                              );
+                            },
+                          );
+                        },
+                        separatorBuilder: (_, __) => const Divider(height: 1),
+                      ),
           ),
 
           const Spacer(),
@@ -305,7 +303,7 @@ class _PantallaPerfilState extends State<PantallaPerfil> {
           padding: const EdgeInsets.all(24.0),
           child: Text(
             'Todavía no publicaste nada.\n'
-                'Podés crear publicaciones desde el calendario o los eventos.',
+            'Podés crear publicaciones desde el calendario o los eventos.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium,
           ),

@@ -251,22 +251,23 @@ class _PantallaCalendarioGeneralState extends State<PantallaCalendarioGeneral> {
 
     Color bgColor = Colors.transparent;
     final primaryColor = theme.colorScheme.primary;
+    final secondaryColor = theme.colorScheme.secondary;
 
     if (hayEventos) {
       // Color suave si solo son tus eventos
-      bgColor = Colors.indigo.withOpacity(0.18);
+      bgColor = primaryColor.withOpacity(0.18);
     }
 
     if (tieneCoincidencia) {
       // Aumentamos la intensidad para marcar la coincidencia del grupo
-      bgColor = Colors.orange.withOpacity(hayEventos ? 0.35 : 0.25);
+      bgColor = secondaryColor.withOpacity(hayEventos ? 0.35 : 0.25);
     }
 
     Border? border;
     if (isSelected) {
-      border = Border.all(color: Colors.deepPurple, width: 2);
+      border = Border.all(color: primaryColor, width: 2);
     } else if (isToday) {
-      border = Border.all(color: Colors.indigo, width: 1.5);
+      border = Border.all(color: primaryColor, width: 1.5);
     }
 
     return AnimatedContainer(
@@ -438,7 +439,7 @@ class _PantallaCalendarioGeneralState extends State<PantallaCalendarioGeneral> {
           right: 16,
           child: FloatingActionButton(
             onPressed: _crearNuevoEvento,
-            backgroundColor: Colors.indigo,
+            backgroundColor: theme.colorScheme.secondary,
             child: const Icon(Icons.add),
           ),
         ),
