@@ -5,6 +5,9 @@ import '../../servicios/social/amigos_service.dart';
 import '../../servicios/social/modelos_amigos.dart';
 import '../../servicios/servicio_calendario.dart';
 import '../../servicios/temas_interes_service.dart';
+import '../../servicios/social/publicaciones_service.dart';
+import '../../servicios/social/modelos_publicacion.dart';
+import '../social/widgets/publicacion_card.dart';
 
 class PantallaPerfilUsuario extends StatefulWidget {
   final int userId;
@@ -24,6 +27,9 @@ class _PantallaPerfilUsuarioState extends State<PantallaPerfilUsuario> {
   List<Map<String, dynamic>> calendarios = [];
   bool sonAmigos = false;
   List<TemaInteres> temas = [];
+
+  List<PublicacionModel> _publicaciones = [];
+  bool _cargandoPublicaciones = true;
 
   bool cargando = true;
   String? error;
@@ -64,6 +70,9 @@ class _PantallaPerfilUsuarioState extends State<PantallaPerfilUsuario> {
       // Cargar temas de interés del usuario
       final temasUsuario = await TemasInteresService.obtenerTemasDeUsuario(widget.userId);
 
+      final pubs = await PublicacionesService
+          .obtenerPublicacionesDePerfil(widget.userId);
+
       setState(() {
         nombre = usuarioRes['nombre'] ?? '';
         apellido = usuarioRes['apellido'] ?? '';
@@ -74,6 +83,8 @@ class _PantallaPerfilUsuarioState extends State<PantallaPerfilUsuario> {
         sonAmigos = amigos;
         temas = temasUsuario;
         cargando = false;
+        _publicaciones = pubs;
+        _cargandoPublicaciones = false;
       });
     } catch (e) {
       setState(() {
@@ -216,7 +227,28 @@ class _PantallaPerfilUsuarioState extends State<PantallaPerfilUsuario> {
                     ),
               ),
               const SizedBox(height: 24),
-
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Publicaciones',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (_cargandoPublicaciones)
+                const Center(child: CircularProgressIndicator())
+              else if (_publicaciones.isEmpty)
+                const Text('Este usuario aún no tiene publicaciones visibles para vos.')
+              else
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _publicaciones.length,
+                  itemBuilder: (_, i) {
+                    final p = _publicaciones[i];
+                    return PublicacionCard(publicacion: p);
+                  },
+                ),
               // Calendarios públicos
               if (calendarios.isNotEmpty) ...[
                 const Align(
