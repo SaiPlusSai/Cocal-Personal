@@ -60,8 +60,8 @@ class _PantallaFeedState extends State<PantallaFeed> {
           child: SafeArea(
             child: ComposerPublicacion(
               onPublicacionCreada: () async {
-                Navigator.pop(ctx);      // cerrar modal
-                await _cargarFeed();      // recargar feed
+                Navigator.pop(ctx); // cerrar modal
+                await _cargarFeed(); // recargar feed
               },
             ),
           ),
@@ -78,30 +78,30 @@ class _PantallaFeedState extends State<PantallaFeed> {
         onPressed: _abrirComposer,
         icon: const Icon(Icons.edit),
         label: const Text('¿En qué estás pensando?'),
-        backgroundColor: Colors.indigo,
+        backgroundColor: Theme.of(context).colorScheme.secondary,
       ),
 
       body: _cargando
           ? const Center(child: CircularProgressIndicator())
           : _publicaciones.isEmpty
-          ? const Center(
-        child: Text('Aún no hay publicaciones de tus amigos'),
-      )
-          : RefreshIndicator(
-        onRefresh: _cargarFeed,
-        child: ListView.builder(
-          padding: const EdgeInsets.only(bottom: 80),
-          itemCount: _publicaciones.length,
-          itemBuilder: (_, i) {
-            final pub = _publicaciones[i];
-            return PublicacionCard(
-              publicacion: pub,
-              mostrarEvento: true,
-              onEliminada: _cargarFeed,
-            );
-          },
-        ),
-      ),
+              ? const Center(
+                  child: Text('Aún no hay publicaciones de tus amigos'),
+                )
+              : RefreshIndicator(
+                  onRefresh: _cargarFeed,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 80),
+                    itemCount: _publicaciones.length,
+                    itemBuilder: (_, i) {
+                      final pub = _publicaciones[i];
+                      return PublicacionCard(
+                        publicacion: pub,
+                        mostrarEvento: true,
+                        onEliminada: _cargarFeed,
+                      );
+                    },
+                  ),
+                ),
     );
   }
 }

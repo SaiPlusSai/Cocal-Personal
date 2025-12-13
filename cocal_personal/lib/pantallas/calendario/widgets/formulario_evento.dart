@@ -123,7 +123,7 @@ class FormularioEvento extends StatelessWidget {
           icon: const Icon(Icons.save),
           label: const Text('Guardar cambios'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.indigo,
+            backgroundColor: Theme.of(context).colorScheme.secondary,
             minimumSize: const Size(double.infinity, 45),
           ),
         ),

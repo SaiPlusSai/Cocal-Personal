@@ -87,17 +87,15 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
 
     switch (_indiceActual) {
       case 0:
-      // Vista calendario general del usuario (el propio)
-        return PantallaCalendarioGeneral(
-          correo: correoUsuario ?? '',
-        );
+        // Vista calendario general del usuario (el propio)
+        return PantallaCalendarioGeneral(correo: correoUsuario ?? '');
       case 2:
-      // Búsqueda de usuarios
+        // Búsqueda de usuarios
         return const PantallaUsuarios();
       case 3:
-      // Lista de grupos
+        // Lista de grupos
         return const PantallaGrupos();
-        // Feed del usuario
+      // Feed del usuario
       case 1:
         return const PantallaFeed();
       default:
@@ -136,7 +134,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _indiceActual,
         onTap: _onTabTapped,
-        selectedItemColor: Colors.indigo,
+        selectedItemColor: Theme.of(context).colorScheme.primary,
         unselectedItemColor: Colors.grey,
         showUnselectedLabels: true,
         items: const [
@@ -148,10 +146,7 @@ class _PantallaPrincipalState extends State<PantallaPrincipal> {
             icon: Icon(Icons.home_outlined),
             label: 'Inicio',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: 'Buscar',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Buscar'),
           BottomNavigationBarItem(
             icon: Icon(Icons.chat_bubble_outline),
             label: 'Grupos',

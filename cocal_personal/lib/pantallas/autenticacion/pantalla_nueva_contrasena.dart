@@ -1,4 +1,4 @@
-//pantallas/autenticacion/pantallla_nueva_contrasena.dart
+// pantallas/autenticacion/pantalla_nueva_contrasena.dart
 import 'package:flutter/material.dart';
 import '../../servicios/autenticacion/autenticacion_service.dart';
 
@@ -6,7 +6,8 @@ class PantallaNuevaContrasena extends StatefulWidget {
   const PantallaNuevaContrasena({super.key});
 
   @override
-  State<PantallaNuevaContrasena> createState() => _PantallaNuevaContrasenaState();
+  State<PantallaNuevaContrasena> createState() =>
+      _PantallaNuevaContrasenaState();
 }
 
 class _PantallaNuevaContrasenaState extends State<PantallaNuevaContrasena> {
@@ -15,6 +16,13 @@ class _PantallaNuevaContrasenaState extends State<PantallaNuevaContrasena> {
   bool _oculto1 = true;
   bool _oculto2 = true;
   bool _loading = false;
+
+  // Colores del diseño CoCal
+  static const Color colorFondoClaro = Color(0xFFC3E5DF);
+  static const Color colorFondoOscuro = Color(0xFF6BC9B7);
+  static const Color colorBoton = Color(0xFF6BC9B7);
+  static const Color colorTextoOscuro = Color(0xFF1A3A34);
+  static const Color colorHoja = Color(0xFF5DB075);
 
   @override
   void dispose() {
@@ -25,8 +33,10 @@ class _PantallaNuevaContrasenaState extends State<PantallaNuevaContrasena> {
 
   String? _validarPolitica(String pass) {
     if (pass.length < 8) return 'Mínimo 8 caracteres';
-    if (!RegExp(r'[A-Z]').hasMatch(pass)) return 'Incluí al menos una mayúscula';
-    if (!RegExp(r'[a-z]').hasMatch(pass)) return 'Incluí al menos una minúscula';
+    if (!RegExp(r'[A-Z]').hasMatch(pass))
+      return 'Incluí al menos una mayúscula';
+    if (!RegExp(r'[a-z]').hasMatch(pass))
+      return 'Incluí al menos una minúscula';
     if (!RegExp(r'\d').hasMatch(pass)) return 'Incluí al menos un número';
     return null;
   }
@@ -67,64 +77,242 @@ class _PantallaNuevaContrasenaState extends State<PantallaNuevaContrasena> {
 
   @override
   Widget build(BuildContext context) {
-    final t = Theme.of(context);
-
     return Scaffold(
-      appBar: AppBar(title: const Text('Nueva contraseña')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                TextField(
-                  controller: _pass1,
-                  obscureText: _oculto1,
-                  decoration: InputDecoration(
-                    labelText: 'Nueva contraseña',
-                    suffixIcon: IconButton(
-                      onPressed: () => setState(() => _oculto1 = !_oculto1),
-                      icon: Icon(_oculto1 ? Icons.visibility : Icons.visibility_off),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [colorFondoClaro, colorFondoOscuro],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 40),
+
+                    // Logo
+                    Hero(
+                      tag: 'logo_cocal',
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              color: colorHoja,
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(40),
+                                topRight: Radius.circular(40),
+                                bottomLeft: Radius.circular(40),
+                                bottomRight: Radius.circular(8),
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.eco,
+                              size: 50,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'CoCal',
+                            style: TextStyle(
+                              fontSize: 42,
+                              fontWeight: FontWeight.bold,
+                              color: colorTextoOscuro,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'CALENDARIO COLABORATIVO',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: colorTextoOscuro,
+                              letterSpacing: 2,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _pass2,
-                  obscureText: _oculto2,
-                  decoration: InputDecoration(
-                    labelText: 'Repetir contraseña',
-                    suffixIcon: IconButton(
-                      onPressed: () => setState(() => _oculto2 = !_oculto2),
-                      icon: Icon(_oculto2 ? Icons.visibility : Icons.visibility_off),
+
+                    const SizedBox(height: 48),
+
+                    const Text(
+                      'Nueva contraseña',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: colorTextoOscuro,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                  ),
-                  onSubmitted: (_) => _loading ? null : _guardar(),
-                ),
-                const SizedBox(height: 16),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Requisitos: 8+ caracteres, 1 mayúscula, 1 minúscula, 1 número.',
-                    style: t.textTheme.bodySmall?.copyWith(
-                      color: t.colorScheme.onBackground.withOpacity(0.7),
+
+                    const SizedBox(height: 32),
+
+                    // Campo de nueva contraseña
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: _pass1,
+                        obscureText: _oculto1,
+                        decoration: InputDecoration(
+                          hintText: 'Nueva contraseña',
+                          prefixIcon: Icon(
+                            Icons.lock_outline,
+                            color: colorTextoOscuro.withOpacity(0.6),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _oculto1
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                              color: colorTextoOscuro.withOpacity(0.6),
+                            ),
+                            onPressed: () =>
+                                setState(() => _oculto1 = !_oculto1),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 18,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+
+                    const SizedBox(height: 16),
+
+                    // Campo de repetir contraseña
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: _pass2,
+                        obscureText: _oculto2,
+                        decoration: InputDecoration(
+                          hintText: 'Repetir contraseña',
+                          prefixIcon: Icon(
+                            Icons.lock_outline,
+                            color: colorTextoOscuro.withOpacity(0.6),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _oculto2
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                              color: colorTextoOscuro.withOpacity(0.6),
+                            ),
+                            onPressed: () =>
+                                setState(() => _oculto2 = !_oculto2),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 18,
+                          ),
+                        ),
+                        onSubmitted: (_) => _loading ? null : _guardar(),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    const Text(
+                      'Requisitos: 8+ caracteres, 1 mayúscula, 1 minúscula, 1 número.',
+                      style: TextStyle(fontSize: 12, color: colorTextoOscuro),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Botón guardar
+                    Container(
+                      height: 56,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: colorBoton.withOpacity(0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: ElevatedButton(
+                        onPressed: _loading ? null : _guardar,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: colorBoton,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: colorBoton.withOpacity(0.5),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: _loading
+                            ? const SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : const Text(
+                                'Guardar',
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 40),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _loading ? null : _guardar,
-                    child: _loading
-                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('Guardar'),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),

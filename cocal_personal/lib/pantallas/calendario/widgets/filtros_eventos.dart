@@ -45,7 +45,7 @@ class FiltrosEventosCalendario extends StatelessWidget {
             runSpacing: 4,
             children: [
               ...temasDisponibles.map(
-                    (t) => FilterChip(
+                (t) => FilterChip(
                   label: Text(t.capitalize()),
                   selected: temaSeleccionado == t,
                   backgroundColor: colorPorTema(t).withOpacity(0.1),
@@ -61,12 +61,12 @@ class FiltrosEventosCalendario extends StatelessWidget {
             children: estadosDisponibles
                 .map(
                   (e) => ChoiceChip(
-                label: Text(e.capitalize()),
-                selected: estadoSeleccionado == e,
-                selectedColor: Colors.indigoAccent,
-                onSelected: (v) => onEstadoChanged(v ? e : null),
-              ),
-            )
+                    label: Text(e.capitalize()),
+                    selected: estadoSeleccionado == e,
+                    selectedColor: Theme.of(context).colorScheme.secondary,
+                    onSelected: (v) => onEstadoChanged(v ? e : null),
+                  ),
+                )
                 .toList(),
           ),
         ],
